@@ -84,6 +84,7 @@ function App() {
               <div
                 style={{
                   position: "absolute",
+                  pointerEvents: "none",
                   top: `${
                     (coordinates[images[currentIndex]].y /
                       document.getElementById("image").naturalHeight) *
@@ -94,9 +95,6 @@ function App() {
                       document.getElementById("image").naturalWidth) *
                     100
                   }%`,
-                  width: "1px",
-                  height: "1px",
-                  backgroundColor: "transparent",
                   transform: "translate(-50%, -50%)",
                 }}
               >
