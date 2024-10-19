@@ -5,6 +5,7 @@ function App() {
   const [images, setImages] = useState([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [coordinates, setCoordinates] = useState({});
+  const [imageFiles, setImageFiles] = useState([]);
 
   const handleSelectFolder = () => {
     const input = document.createElement("input");
@@ -13,10 +14,10 @@ function App() {
     input.multiple = true;
     input.onchange = (event) => {
       const files = Array.from(event.target.files);
-      const imageFiles = files
-        .filter((file) => file.type.startsWith("image/"))
-        .map((file) => URL.createObjectURL(file));
-      setImages(imageFiles);
+      const imageFiles = files.filter((file) => file.type.startsWith("image/"));
+      const imageURLs = imageFiles.map((file) => URL.createObjectURL(file));
+      setImages(imageURLs);
+      setImageFiles(imageFiles);
       setCurrentIndex(0);
       setCoordinates({});
     };
@@ -27,7 +28,10 @@ function App() {
     const rect = event.target.getBoundingClientRect();
     const x = event.clientX - rect.left;
     const y = event.clientY - rect.top;
-    setCoordinates((prev) => ({ ...prev, [images[currentIndex]]: { x, y } }));
+    setCoordinates((prev) => ({
+      ...prev,
+      [imageFiles[currentIndex].name]: { x, y },
+    }));
   };
 
   const handleNextImage = () => {
@@ -71,9 +75,9 @@ function App() {
           />
           <p>
             Coordinates:{" "}
-            {coordinates[images[currentIndex]]
-              ? `(${coordinates[images[currentIndex]].x}, ${
-                  coordinates[images[currentIndex]].y
+            {coordinates[imageFiles[currentIndex]?.name]
+              ? `(${coordinates[imageFiles[currentIndex].name].x}, ${
+                  coordinates[imageFiles[currentIndex].name].y
                 })`
               : "None"}
           </p>
