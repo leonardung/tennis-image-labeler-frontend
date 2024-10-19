@@ -94,13 +94,31 @@ function App() {
                       document.getElementById("image").naturalWidth) *
                     100
                   }%`,
-                  width: "10px",
-                  height: "10px",
-                  backgroundColor: "green",
+                  width: "1px",
+                  height: "1px",
+                  backgroundColor: "transparent",
                   transform: "translate(-50%, -50%)",
-                  borderRadius: "50%",
                 }}
-              ></div>
+              >
+                <div
+                  style={{
+                    position: "absolute",
+                    width: "20px",
+                    height: "2px",
+                    backgroundColor: "green",
+                    transform: "translate(-50%, -50%) rotate(0deg)",
+                  }}
+                ></div>
+                <div
+                  style={{
+                    position: "absolute",
+                    width: "20px",
+                    height: "2px",
+                    backgroundColor: "green",
+                    transform: "translate(-50%, -50%) rotate(90deg)",
+                  }}
+                ></div>
+              </div>
             )}
           </div>
           <p>
