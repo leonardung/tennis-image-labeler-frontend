@@ -78,29 +78,28 @@ function App() {
     a.download = "labels.csv";
     a.click();
   };
-
+  const batch_size = 10;
   const handleUseModel = async () => {
-    if (files.length === 0) return;
+    for (let i = 0; i < files.length; i += batch_size) {
+      const formData = new FormData();
+      files.slice(i, i + batch_size).forEach((file) => {
+        formData.append("images", file);
+      });
 
-    const formData = new FormData();
-    formData.append("image", files[currentIndex]);
-
-    try {
-      const response = await axios.post(
-        "http://localhost:8000/api/process-images/",
-        formData,
-        {
-          headers: {
-            "Content-Type": "multipart/form-data",
-          },
-        }
-      );
-      setCoordinates((prev) => ({
-        ...prev,
-        [images[currentIndex]]: response.data.coordinates,
-      }));
-    } catch (error) {
-      console.error("Error using model: ", error);
+      try {
+        const response = await axios.post(
+          "http://localhost:8000/api/get-coordinates/",
+          formData,
+          {
+            headers: {
+              "Content-Type": "multipart/form-data",
+            },
+          }
+        );
+        setCoordinates((prev) => ({ ...prev, ...response.data.coordinates }));
+      } catch (error) {
+        console.error("Error using model: ", error);
+      }
     }
   };
 
