@@ -66,13 +66,42 @@ function App() {
       <button onClick={handleSelectFolder}>Select Folder</button>
       {images.length > 0 ? (
         <div>
-          <div style={{ border: "4px solid black", display: "inline-block" }}>
+          <div
+            style={{
+              border: "4px solid black",
+              display: "inline-block",
+              position: "relative",
+            }}
+          >
             <img
+              id="image"
               src={images[currentIndex]}
               alt="Label"
               onClick={handleImageClick}
               style={{ maxWidth: "100%", maxHeight: "80vh" }}
             />
+            {coordinates[images[currentIndex]] && (
+              <div
+                style={{
+                  position: "absolute",
+                  top: `${
+                    (coordinates[images[currentIndex]].y /
+                      document.getElementById("image").naturalHeight) *
+                    100
+                  }%`,
+                  left: `${
+                    (coordinates[images[currentIndex]].x /
+                      document.getElementById("image").naturalWidth) *
+                    100
+                  }%`,
+                  width: "10px",
+                  height: "10px",
+                  backgroundColor: "green",
+                  transform: "translate(-50%, -50%)",
+                  borderRadius: "50%",
+                }}
+              ></div>
+            )}
           </div>
           <p>
             Coordinates:{" "}
