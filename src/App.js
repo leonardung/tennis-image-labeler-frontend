@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from "react";
 import "./App.css";
+import axios from "axios";
 
 function App() {
   const [images, setImages] = useState([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [coordinates, setCoordinates] = useState({});
+  const [files, setFiles] = useState([]);
 
   useEffect(() => {
     const handleKeyDown = (event) => {
@@ -27,11 +29,12 @@ function App() {
     input.webkitdirectory = true;
     input.multiple = true;
     input.onchange = (event) => {
-      const files = Array.from(event.target.files);
-      const imageFiles = files
+      const selectedFiles = Array.from(event.target.files);
+      const imageFiles = selectedFiles
         .filter((file) => file.type.startsWith("image/"))
         .map((file) => URL.createObjectURL(file));
       setImages(imageFiles);
+      setFiles(selectedFiles);
       setCurrentIndex(0);
       setCoordinates({});
     };
@@ -76,6 +79,31 @@ function App() {
     a.click();
   };
 
+  const handleUseModel = async () => {
+    if (files.length === 0) return;
+
+    const formData = new FormData();
+    formData.append("image", files[currentIndex]);
+
+    try {
+      const response = await axios.post(
+        "http://localhost:8000/api/process-images/",
+        formData,
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+        }
+      );
+      setCoordinates((prev) => ({
+        ...prev,
+        [images[currentIndex]]: response.data.coordinates,
+      }));
+    } catch (error) {
+      console.error("Error using model: ", error);
+    }
+  };
+
   return (
     <div className="App">
       <button onClick={handleSelectFolder}>Select Folder</button>
@@ -117,7 +145,7 @@ function App() {
                   style={{
                     position: "absolute",
                     width: "20px",
-                    height: "2px",
+                    height: "1px",
                     backgroundColor: "green",
                     transform: "translate(-50%, -50%) rotate(0deg)",
                   }}
@@ -126,7 +154,7 @@ function App() {
                   style={{
                     position: "absolute",
                     width: "20px",
-                    height: "2px",
+                    height: "1px",
                     backgroundColor: "green",
                     transform: "translate(-50%, -50%) rotate(90deg)",
                   }}
@@ -152,6 +180,7 @@ function App() {
             Next Image
           </button>
           <button onClick={handleSaveLabels}>Save Labels</button>
+          <button onClick={handleUseModel}>Use Model</button>
         </div>
       ) : (
         <p>No images loaded. Please select a folder.</p>
