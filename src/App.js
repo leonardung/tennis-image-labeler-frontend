@@ -5,7 +5,6 @@ function App() {
   const [images, setImages] = useState([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [coordinates, setCoordinates] = useState({});
-  const [imageFiles, setImageFiles] = useState([]);
 
   const handleSelectFolder = () => {
     const input = document.createElement("input");
@@ -14,10 +13,10 @@ function App() {
     input.multiple = true;
     input.onchange = (event) => {
       const files = Array.from(event.target.files);
-      const imageFiles = files.filter((file) => file.type.startsWith("image/"));
-      const imageURLs = imageFiles.map((file) => URL.createObjectURL(file));
-      setImages(imageURLs);
-      setImageFiles(imageFiles);
+      const imageFiles = files
+        .filter((file) => file.type.startsWith("image/"))
+        .map((file) => URL.createObjectURL(file));
+      setImages(imageFiles);
       setCurrentIndex(0);
       setCoordinates({});
     };
@@ -25,13 +24,13 @@ function App() {
   };
 
   const handleImageClick = (event) => {
-    const rect = event.target.getBoundingClientRect();
-    const x = event.clientX - rect.left;
-    const y = event.clientY - rect.top;
-    setCoordinates((prev) => ({
-      ...prev,
-      [imageFiles[currentIndex].name]: { x, y },
-    }));
+    const img = event.target;
+    const rect = img.getBoundingClientRect();
+    const scaleX = img.naturalWidth / rect.width;
+    const scaleY = img.naturalHeight / rect.height;
+    const x = (event.clientX - rect.left) * scaleX;
+    const y = (event.clientY - rect.top) * scaleY;
+    setCoordinates((prev) => ({ ...prev, [images[currentIndex]]: { x, y } }));
   };
 
   const handleNextImage = () => {
@@ -75,10 +74,10 @@ function App() {
           />
           <p>
             Coordinates:{" "}
-            {coordinates[imageFiles[currentIndex]?.name]
-              ? `(${coordinates[imageFiles[currentIndex].name].x}, ${
-                  coordinates[imageFiles[currentIndex].name].y
-                })`
+            {coordinates[images[currentIndex]]
+              ? `(${coordinates[images[currentIndex]].x.toFixed(
+                  2
+                )}, ${coordinates[images[currentIndex]].y.toFixed(2)})`
               : "None"}
           </p>
           <button onClick={handlePrevImage} disabled={currentIndex === 0}>
