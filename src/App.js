@@ -6,6 +6,21 @@ function App() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [coordinates, setCoordinates] = useState({});
 
+  useEffect(() => {
+    const handleKeyDown = (event) => {
+      if (event.key === "a") {
+        handlePrevImage();
+      } else if (event.key === "d") {
+        handleNextImage();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [currentIndex, images]);
+
   const handleSelectFolder = () => {
     const input = document.createElement("input");
     input.type = "file";
