@@ -66,12 +66,14 @@ function App() {
       <button onClick={handleSelectFolder}>Select Folder</button>
       {images.length > 0 ? (
         <div>
-          <img
-            src={images[currentIndex]}
-            alt="Label"
-            onClick={handleImageClick}
-            style={{ maxWidth: "100%", maxHeight: "80vh" }}
-          />
+          <div style={{ border: "4px solid black", display: "inline-block" }}>
+            <img
+              src={images[currentIndex]}
+              alt="Label"
+              onClick={handleImageClick}
+              style={{ maxWidth: "100%", maxHeight: "80vh" }}
+            />
+          </div>
           <p>
             Coordinates:{" "}
             {coordinates[images[currentIndex]]
