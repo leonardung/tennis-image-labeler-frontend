@@ -48,7 +48,10 @@ function App() {
     const scaleY = img.naturalHeight / rect.height;
     const x = (event.clientX - rect.left) * scaleX;
     const y = (event.clientY - rect.top) * scaleY;
-    setCoordinates((prev) => ({ ...prev, [images[currentIndex]]: { x, y } }));
+    setCoordinates((prev) => ({
+      ...prev,
+      [files[currentIndex].name]: { x, y },
+    }));
   };
 
   const handleNextImage = () => {
@@ -78,11 +81,11 @@ function App() {
     a.download = "labels.csv";
     a.click();
   };
-  const batch_size = 10;
+
   const handleUseModel = async () => {
-    for (let i = 0; i < files.length; i += batch_size) {
+    for (let i = 0; i < files.length; i += 10) {
       const formData = new FormData();
-      files.slice(i, i + batch_size).forEach((file) => {
+      files.slice(i, i + 10).forEach((file) => {
         formData.append("images", file);
       });
 
@@ -96,7 +99,9 @@ function App() {
             },
           }
         );
-        setCoordinates((prev) => ({ ...prev, ...response.data.coordinates }));
+        if (response.data && response.data.coordinates) {
+          setCoordinates((prev) => ({ ...prev, ...response.data.coordinates }));
+        }
       } catch (error) {
         console.error("Error using model: ", error);
       }
@@ -122,18 +127,18 @@ function App() {
               onClick={handleImageClick}
               style={{ maxWidth: "100%", maxHeight: "80vh" }}
             />
-            {coordinates[images[currentIndex]] && (
+            {coordinates[files[currentIndex]?.name] && (
               <div
                 style={{
                   position: "absolute",
                   pointerEvents: "none",
                   top: `${
-                    (coordinates[images[currentIndex]].y /
+                    (coordinates[files[currentIndex].name].y /
                       document.getElementById("image").naturalHeight) *
                     100
                   }%`,
                   left: `${
-                    (coordinates[images[currentIndex]].x /
+                    (coordinates[files[currentIndex].name].x /
                       document.getElementById("image").naturalWidth) *
                     100
                   }%`,
@@ -144,8 +149,8 @@ function App() {
                   style={{
                     position: "absolute",
                     width: "20px",
-                    height: "1px",
-                    backgroundColor: "green",
+                    height: "2px",
+                    backgroundColor: "red",
                     transform: "translate(-50%, -50%) rotate(0deg)",
                   }}
                 ></div>
@@ -153,8 +158,8 @@ function App() {
                   style={{
                     position: "absolute",
                     width: "20px",
-                    height: "1px",
-                    backgroundColor: "green",
+                    height: "2px",
+                    backgroundColor: "red",
                     transform: "translate(-50%, -50%) rotate(90deg)",
                   }}
                 ></div>
@@ -163,10 +168,10 @@ function App() {
           </div>
           <p>
             Coordinates:{" "}
-            {coordinates[images[currentIndex]]
-              ? `(${coordinates[images[currentIndex]].x.toFixed(
+            {coordinates[files[currentIndex]?.name]
+              ? `(${coordinates[files[currentIndex].name].x.toFixed(
                   2
-                )}, ${coordinates[images[currentIndex]].y.toFixed(2)})`
+                )}, ${coordinates[files[currentIndex].name].y.toFixed(2)})`
               : "None"}
           </p>
           <button onClick={handlePrevImage} disabled={currentIndex === 0}>
