@@ -83,12 +83,15 @@ function App() {
   };
 
   const handleUseModel = async () => {
-    for (let i = 0; i < files.length; i += 10) {
+    const taskIds = [];
+  
+    // Step 1: Upload all images in batches of 5 and get task IDs
+    for (let i = 0; i < files.length; i += 5) {
       const formData = new FormData();
-      files.slice(i, i + 10).forEach((file) => {
+      files.slice(i, i + 5).forEach((file) => {
         formData.append("images", file);
       });
-
+  
       try {
         const response = await axios.post(
           "http://localhost:8000/api/get-coordinates/",
@@ -99,13 +102,42 @@ function App() {
             },
           }
         );
-        if (response.data && response.data.coordinates) {
-          setCoordinates((prev) => ({ ...prev, ...response.data.coordinates }));
+        if (response.data && response.data.task_id) {
+          taskIds.push(response.data.task_id);
         }
       } catch (error) {
-        console.error("Error using model: ", error);
+        console.error("Error uploading images: ", error);
       }
     }
+  
+    // Step 2: Check the status of each task until it is completed
+    taskIds.forEach(async (taskId) => {
+      let isPending = true;
+  
+      while (isPending) {
+        try {
+          const response = await axios.get(
+            `http://localhost:8000/api/check-task-status/${taskId}/`
+          );
+  
+          if (response.data.status === "success") {
+            console.log(response.data.result)
+            setCoordinates((prev) => ({ ...prev, ...response.data.result }));
+            isPending = false; // Task is complete, exit the loop
+          } else if (response.data.status === "failed") {
+            console.error(`Task ${taskId} failed:`, response.data.error);
+            isPending = false; // Stop checking for this task if it failed
+          }
+        } catch (error) {
+          console.error("Error checking task status: ", error);
+        }
+  
+        // Delay for a short time before checking again
+        if (isPending) {
+          await new Promise((resolve) => setTimeout(resolve, 2000));
+        }
+      }
+    });
   };
 
   return (
