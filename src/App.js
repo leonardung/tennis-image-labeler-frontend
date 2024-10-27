@@ -109,35 +109,6 @@ function App() {
         console.error("Error uploading images: ", error);
       }
     }
-
-    // Step 2: Check the status of each task until it is completed
-    taskIds.forEach(async (taskId) => {
-      let isPending = true;
-
-      while (isPending) {
-        try {
-          const response = await axios.get(
-            `http://localhost:8000/api/check-task-status/${taskId}/`
-          );
-
-          if (response.data.status === "success") {
-            console.log(response.data.result);
-            setCoordinates((prev) => ({ ...prev, ...response.data.result }));
-            isPending = false; // Task is complete, exit the loop
-          } else if (response.data.status === "failed") {
-            console.error(`Task ${taskId} failed:`, response.data.error);
-            isPending = false; // Stop checking for this task if it failed
-          }
-        } catch (error) {
-          console.error("Error checking task status: ", error);
-        }
-
-        // Delay for a short time before checking again
-        if (isPending) {
-          await new Promise((resolve) => setTimeout(resolve, 2000));
-        }
-      }
-    });
   };
 
   // Main component rendering the application
