@@ -84,14 +84,14 @@ function App() {
 
   const handleUseModel = async () => {
     const taskIds = [];
-  
+
     // Step 1: Upload all images in batches of 5 and get task IDs
     for (let i = 0; i < files.length; i += 5) {
       const formData = new FormData();
       files.slice(i, i + 5).forEach((file) => {
         formData.append("images", file);
       });
-  
+
       try {
         const response = await axios.post(
           "http://localhost:8000/api/get-coordinates/",
@@ -109,19 +109,19 @@ function App() {
         console.error("Error uploading images: ", error);
       }
     }
-  
+
     // Step 2: Check the status of each task until it is completed
     taskIds.forEach(async (taskId) => {
       let isPending = true;
-  
+
       while (isPending) {
         try {
           const response = await axios.get(
             `http://localhost:8000/api/check-task-status/${taskId}/`
           );
-  
+
           if (response.data.status === "success") {
-            console.log(response.data.result)
+            console.log(response.data.result);
             setCoordinates((prev) => ({ ...prev, ...response.data.result }));
             isPending = false; // Task is complete, exit the loop
           } else if (response.data.status === "failed") {
@@ -131,7 +131,7 @@ function App() {
         } catch (error) {
           console.error("Error checking task status: ", error);
         }
-  
+
         // Delay for a short time before checking again
         if (isPending) {
           await new Promise((resolve) => setTimeout(resolve, 2000));
@@ -140,9 +140,31 @@ function App() {
     });
   };
 
+  // Main component rendering the application
   return (
-    <div className="App">
-      <button onClick={handleSelectFolder}>Select Folder</button>
+    <div
+      className="App"
+      style={{ textAlign: "center", fontFamily: "Arial, sans-serif" }}
+    >
+      <header style={{ margin: "20px" }}>
+        {/* Button to select a folder containing images */}
+        <button
+          onClick={handleSelectFolder}
+          style={{
+            padding: "10px 20px",
+            fontSize: "16px",
+            borderRadius: "8px",
+            cursor: "pointer",
+            backgroundColor: "#4CAF50",
+            color: "white",
+            border: "none",
+          }}
+        >
+          Select Folder
+        </button>
+      </header>
+
+      {/* Check if there are images to display */}
       {images.length > 0 ? (
         <div>
           <div
@@ -150,15 +172,26 @@ function App() {
               border: "4px solid black",
               display: "inline-block",
               position: "relative",
+              boxShadow: "0px 4px 8px rgba(0, 0, 0, 0.2)",
+              marginBottom: "20px",
+              verticalAlign: "top",
             }}
           >
+            {/* Display the current image */}
             <img
               id="image"
               src={images[currentIndex]}
               alt="Label"
               onClick={handleImageClick}
-              style={{ maxWidth: "100%", maxHeight: "80vh" }}
+              style={{
+                maxWidth: "100%",
+                maxHeight: "80vh",
+                cursor: "crosshair",
+                display: "block",
+              }}
             />
+
+            {/* Display crosshairs at the labeled coordinate if available */}
             {coordinates[files[currentIndex]?.name] && (
               <div
                 style={{
@@ -177,6 +210,7 @@ function App() {
                   transform: "translate(-50%, -50%)",
                 }}
               >
+                {/* Horizontal part of the crosshair */}
                 <div
                   style={{
                     position: "absolute",
@@ -186,6 +220,7 @@ function App() {
                     transform: "translate(-50%, -50%) rotate(0deg)",
                   }}
                 ></div>
+                {/* Vertical part of the crosshair */}
                 <div
                   style={{
                     position: "absolute",
@@ -198,7 +233,9 @@ function App() {
               </div>
             )}
           </div>
-          <p>
+
+          {/* Display the coordinates of the labeled point */}
+          <p style={{ margin: "10px 0", fontSize: "18px" }}>
             Coordinates:{" "}
             {coordinates[files[currentIndex]?.name]
               ? `(${coordinates[files[currentIndex].name].x.toFixed(
@@ -206,20 +243,85 @@ function App() {
                 )}, ${coordinates[files[currentIndex].name].y.toFixed(2)})`
               : "None"}
           </p>
-          <button onClick={handlePrevImage} disabled={currentIndex === 0}>
-            Previous Image
-          </button>
-          <button
-            onClick={handleNextImage}
-            disabled={currentIndex === images.length - 1}
-          >
-            Next Image
-          </button>
-          <button onClick={handleSaveLabels}>Save Labels</button>
-          <button onClick={handleUseModel}>Use Model</button>
+
+          {/* Buttons to navigate between images */}
+          <div style={{ marginBottom: "20px" }}>
+            <button
+              onClick={handlePrevImage}
+              disabled={currentIndex === 0}
+              style={{
+                padding: "10px 20px",
+                marginRight: "10px",
+                fontSize: "16px",
+                borderRadius: "8px",
+                cursor: currentIndex === 0 ? "not-allowed" : "pointer",
+                backgroundColor: currentIndex === 0 ? "#ccc" : "#2196F3",
+                color: "white",
+                border: "none",
+              }}
+            >
+              Previous Image
+            </button>
+            <button
+              onClick={handleNextImage}
+              disabled={currentIndex === images.length - 1}
+              style={{
+                padding: "10px 20px",
+                marginRight: "10px",
+                fontSize: "16px",
+                borderRadius: "8px",
+                cursor:
+                  currentIndex === images.length - 1
+                    ? "not-allowed"
+                    : "pointer",
+                backgroundColor:
+                  currentIndex === images.length - 1 ? "#ccc" : "#2196F3",
+                color: "white",
+                border: "none",
+              }}
+            >
+              Next Image
+            </button>
+          </div>
+
+          {/* Buttons to save labels or use a model for labeling */}
+          <div>
+            <button
+              onClick={handleSaveLabels}
+              style={{
+                padding: "10px 20px",
+                marginRight: "10px",
+                fontSize: "16px",
+                borderRadius: "8px",
+                cursor: "pointer",
+                backgroundColor: "#FF9800",
+                color: "white",
+                border: "none",
+              }}
+            >
+              Save Labels
+            </button>
+            <button
+              onClick={handleUseModel}
+              style={{
+                padding: "10px 20px",
+                fontSize: "16px",
+                borderRadius: "8px",
+                cursor: "pointer",
+                backgroundColor: "#009688",
+                color: "white",
+                border: "none",
+              }}
+            >
+              Use Model
+            </button>
+          </div>
         </div>
       ) : (
-        <p>No images loaded. Please select a folder.</p>
+        // Message to display when no images are loaded
+        <p style={{ fontSize: "18px", color: "#777" }}>
+          No images loaded. Please select a folder.
+        </p>
       )}
     </div>
   );
