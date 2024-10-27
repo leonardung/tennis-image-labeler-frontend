@@ -7,6 +7,7 @@ function App() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [coordinates, setCoordinates] = useState({});
   const [files, setFiles] = useState([]);
+  const [folderPath, setFolderPath] = useState("");
 
   useEffect(() => {
     const handleKeyDown = (event) => {
@@ -23,12 +24,12 @@ function App() {
     };
   }, [currentIndex, images]);
 
-  const handleSelectFolder = () => {
+  const handleSelectFolder = async () => {
     const input = document.createElement("input");
     input.type = "file";
     input.webkitdirectory = true;
     input.multiple = true;
-    input.onchange = (event) => {
+    input.onchange = async (event) => {
       const selectedFiles = Array.from(event.target.files);
       const imageFiles = selectedFiles
         .filter((file) => file.type.startsWith("image/"))
@@ -37,6 +38,21 @@ function App() {
       setFiles(selectedFiles);
       setCurrentIndex(0);
       setCoordinates({});
+
+      const path = selectedFiles[0]?.webkitRelativePath.split("/")[0];
+      setFolderPath(path);
+
+      // Load coordinates from backend
+      try {
+        const response = await axios.get(
+          `http://localhost:8000/api/get-coordinates/?folder_path=${path}`
+        );
+        if (response.data) {
+          setCoordinates(response.data.coordinates);
+        }
+      } catch (error) {
+        console.error("Error loading coordinates: ", error);
+      }
     };
     input.click();
   };
@@ -48,10 +64,11 @@ function App() {
     const scaleY = img.naturalHeight / rect.height;
     const x = (event.clientX - rect.left) * scaleX;
     const y = (event.clientY - rect.top) * scaleY;
-    setCoordinates((prev) => ({
-      ...prev,
+    const newCoordinates = {
+      ...coordinates,
       [files[currentIndex].name]: { x, y },
-    }));
+    };
+    setCoordinates(newCoordinates);
   };
 
   const handleNextImage = () => {
@@ -63,6 +80,23 @@ function App() {
   const handlePrevImage = () => {
     if (currentIndex > 0) {
       setCurrentIndex(currentIndex - 1);
+    }
+  };
+
+  const saveCoordinatesToBackend = async () => {
+    const currentImage = files[currentIndex]?.name;
+    if (coordinates[currentImage]) {
+      const { x, y } = coordinates[currentImage];
+      try {
+        await axios.post("http://localhost:8000/api/save-coordinates/", {
+          folder_path: folderPath,
+          image_name: currentImage,
+          x,
+          y,
+        });
+      } catch (error) {
+        console.error("Error saving coordinates: ", error);
+      }
     }
   };
 
@@ -83,18 +117,16 @@ function App() {
   };
 
   const handleUseModel = async () => {
-    const taskIds = [];
-
-    // Step 1: Upload all images in batches of 5 and get task IDs
     for (let i = 0; i < files.length; i += 5) {
       const formData = new FormData();
       files.slice(i, i + 5).forEach((file) => {
         formData.append("images", file);
       });
+      formData.append("folder_path", folderPath);
 
       try {
         const response = await axios.post(
-          "http://localhost:8000/api/get-coordinates/",
+          "http://localhost:8000/api/calculate-coordinates/",
           formData,
           {
             headers: {
@@ -102,9 +134,6 @@ function App() {
             },
           }
         );
-        if (response.data && response.data.task_id) {
-          taskIds.push(response.data.task_id);
-        }
       } catch (error) {
         console.error("Error uploading images: ", error);
       }
@@ -156,7 +185,7 @@ function App() {
               onClick={handleImageClick}
               style={{
                 maxWidth: "100%",
-                maxHeight: "80vh",
+                maxHeight: "72vh",
                 cursor: "crosshair",
                 display: "block",
               }}
@@ -258,7 +287,7 @@ function App() {
           {/* Buttons to save labels or use a model for labeling */}
           <div>
             <button
-              onClick={handleSaveLabels}
+              onClick={saveCoordinatesToBackend}
               style={{
                 padding: "10px 20px",
                 marginRight: "10px",
@@ -270,7 +299,22 @@ function App() {
                 border: "none",
               }}
             >
-              Save Labels
+              Save Labels to Database
+            </button>
+            <button
+              onClick={handleSaveLabels}
+              style={{
+                padding: "10px 20px",
+                fontSize: "16px",
+                borderRadius: "8px",
+                marginRight: "10px",
+                cursor: "pointer",
+                backgroundColor: "#FF9800",
+                color: "white",
+                border: "none",
+              }}
+            >
+              Download Labels
             </button>
             <button
               onClick={handleUseModel}
