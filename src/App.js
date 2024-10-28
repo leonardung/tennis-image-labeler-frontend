@@ -140,6 +140,23 @@ function App() {
     }
   };
 
+  const handleClearLabels = () => {
+    setCoordinates({});
+  };
+
+  const handleReloadFromDatabase = async () => {
+    try {
+      const response = await axios.get(
+        `http://localhost:8000/api/get-coordinates/?folder_path=${folderPath}`
+      );
+      if (response.data) {
+        setCoordinates(response.data.coordinates);
+      }
+    } catch (error) {
+      console.error("Error reloading coordinates: ", error);
+    }
+  };
+
   // Main component rendering the application
   return (
     <div
@@ -329,6 +346,36 @@ function App() {
               }}
             >
               Use Model
+            </button>
+            <button
+              onClick={handleClearLabels}
+              style={{
+                padding: "10px 20px",
+                marginLeft: "10px",
+                fontSize: "16px",
+                borderRadius: "8px",
+                cursor: "pointer",
+                backgroundColor: "#f44336",
+                color: "white",
+                border: "none",
+              }}
+            >
+              Clear Labels
+            </button>
+            <button
+              onClick={handleReloadFromDatabase}
+              style={{
+                padding: "10px 20px",
+                marginLeft: "10px",
+                fontSize: "16px",
+                borderRadius: "8px",
+                cursor: "pointer",
+                backgroundColor: "#3f51b5",
+                color: "white",
+                border: "none",
+              }}
+            >
+              Reload from Database
             </button>
           </div>
         </div>
