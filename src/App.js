@@ -64,9 +64,10 @@ function App() {
     const scaleY = img.naturalHeight / rect.height;
     const x = (event.clientX - rect.left) * scaleX;
     const y = (event.clientY - rect.top) * scaleY;
+    const baseImageName = files[currentIndex].name.split("_")[0];
     const newCoordinates = {
       ...coordinates,
-      [files[currentIndex].name]: { x, y },
+      [baseImageName]: { x, y },
     };
     setCoordinates(newCoordinates);
   };
@@ -84,19 +85,22 @@ function App() {
   };
 
   const saveCoordinatesToBackend = async () => {
-    const currentImage = files[currentIndex]?.name;
-    if (coordinates[currentImage]) {
-      const { x, y } = coordinates[currentImage];
-      try {
-        await axios.post("http://localhost:8000/api/save-coordinates/", {
-          folder_path: folderPath,
-          image_name: currentImage,
-          x,
-          y,
-        });
-      } catch (error) {
-        console.error("Error saving coordinates: ", error);
-      }
+    const coordinatesArray = Object.keys(coordinates).map((imageName) => {
+      const { x, y } = coordinates[imageName];
+      return {
+        folder_path: folderPath,
+        image_name: imageName,
+        x,
+        y,
+      };
+    });
+
+    try {
+      await axios.post("http://localhost:8000/api/save-coordinates/", {
+        coordinates: coordinatesArray,
+      });
+    } catch (error) {
+      console.error("Error saving coordinates: ", error);
     }
   };
 
@@ -117,9 +121,12 @@ function App() {
   };
 
   const handleUseModel = async () => {
-    for (let i = 0; i < files.length; i += 5) {
+    const batchSize = 10;
+    const stepSize = 2;
+
+    for (let i = 0; i < files.length - stepSize; i += batchSize - stepSize) {
       const formData = new FormData();
-      files.slice(i, i + 5).forEach((file) => {
+      files.slice(i, i + batchSize).forEach((file) => {
         formData.append("images", file);
       });
       formData.append("folder_path", folderPath);
@@ -170,11 +177,10 @@ function App() {
           style={{
             padding: "10px 20px",
             fontSize: "16px",
-            borderRadius: "8px",
             cursor: "pointer",
             backgroundColor: "#4CAF50",
             color: "white",
-            border: "none",
+            border: "1px solid #4CAF50",
           }}
         >
           Select Folder
@@ -186,11 +192,11 @@ function App() {
         <div>
           <div
             style={{
-              border: "4px solid black",
+              border: "2px solid black",
               display: "inline-block",
               position: "relative",
               boxShadow: "0px 4px 8px rgba(0, 0, 0, 0.2)",
-              marginBottom: "20px",
+              marginBottom: "10px",
               verticalAlign: "top",
             }}
           >
@@ -252,7 +258,7 @@ function App() {
           </div>
 
           {/* Display the coordinates of the labeled point */}
-          <p style={{ margin: "10px 0", fontSize: "18px" }}>
+          <p style={{ margin: "5px 0", fontSize: "18px" }}>
             Coordinates:{" "}
             {coordinates[files[currentIndex]?.name]
               ? `(${coordinates[files[currentIndex].name].x.toFixed(
@@ -267,14 +273,14 @@ function App() {
               onClick={handlePrevImage}
               disabled={currentIndex === 0}
               style={{
-                padding: "10px 20px",
-                marginRight: "10px",
-                fontSize: "16px",
-                borderRadius: "8px",
                 cursor: currentIndex === 0 ? "not-allowed" : "pointer",
                 backgroundColor: currentIndex === 0 ? "#ccc" : "#2196F3",
+                padding: "10px 20px",
+                fontSize: "16px",
+                cursor: "pointer",
                 color: "white",
-                border: "none",
+                border: "0px solid #E0E0E0",
+                flex: 1,
               }}
             >
               Previous Image
@@ -283,18 +289,18 @@ function App() {
               onClick={handleNextImage}
               disabled={currentIndex === images.length - 1}
               style={{
-                padding: "10px 20px",
-                marginRight: "10px",
-                fontSize: "16px",
-                borderRadius: "8px",
                 cursor:
                   currentIndex === images.length - 1
                     ? "not-allowed"
                     : "pointer",
                 backgroundColor:
                   currentIndex === images.length - 1 ? "#ccc" : "#2196F3",
+                padding: "10px 20px",
+                fontSize: "16px",
+                cursor: "pointer",
                 color: "white",
-                border: "none",
+                flex: 1,
+                border: "1px solid #E0E0E0",
               }}
             >
               Next Image
@@ -302,81 +308,89 @@ function App() {
           </div>
 
           {/* Buttons to save labels or use a model for labeling */}
-          <div>
-            <button
-              onClick={saveCoordinatesToBackend}
+          <div style={{ display: "flex", justifyContent: "center" }}>
+            <div
               style={{
-                padding: "10px 20px",
-                marginRight: "10px",
-                fontSize: "16px",
+                display: "flex",
+                backgroundColor: "#E0E0E0",
                 borderRadius: "8px",
-                cursor: "pointer",
-                backgroundColor: "#FF9800",
-                color: "white",
-                border: "none",
               }}
             >
-              Save Labels to Database
-            </button>
-            <button
-              onClick={handleSaveLabels}
-              style={{
-                padding: "10px 20px",
-                fontSize: "16px",
-                borderRadius: "8px",
-                marginRight: "10px",
-                cursor: "pointer",
-                backgroundColor: "#FF9800",
-                color: "white",
-                border: "none",
-              }}
-            >
-              Download Labels
-            </button>
-            <button
-              onClick={handleUseModel}
-              style={{
-                padding: "10px 20px",
-                fontSize: "16px",
-                borderRadius: "8px",
-                cursor: "pointer",
-                backgroundColor: "#009688",
-                color: "white",
-                border: "none",
-              }}
-            >
-              Use Model
-            </button>
-            <button
-              onClick={handleClearLabels}
-              style={{
-                padding: "10px 20px",
-                marginLeft: "10px",
-                fontSize: "16px",
-                borderRadius: "8px",
-                cursor: "pointer",
-                backgroundColor: "#f44336",
-                color: "white",
-                border: "none",
-              }}
-            >
-              Clear Labels
-            </button>
-            <button
-              onClick={handleReloadFromDatabase}
-              style={{
-                padding: "10px 20px",
-                marginLeft: "10px",
-                fontSize: "16px",
-                borderRadius: "8px",
-                cursor: "pointer",
-                backgroundColor: "#3f51b5",
-                color: "white",
-                border: "none",
-              }}
-            >
-              Reload from Database
-            </button>
+              <button
+                onClick={saveCoordinatesToBackend}
+                style={{
+                  padding: "10px 20px",
+                  fontSize: "16px",
+                  cursor: "pointer",
+                  backgroundColor: "#3f51b5",
+                  color: "white",
+                  border: "1px solid #3f51b5",
+                  flex: 1,
+                }}
+              >
+                Save Labels to Database
+              </button>
+              <div style={{ width: "1px", backgroundColor: "#B0BEC5" }}></div>
+              <button
+                onClick={handleSaveLabels}
+                style={{
+                  padding: "10px 20px",
+                  fontSize: "16px",
+                  cursor: "pointer",
+                  backgroundColor: "#3f51b5",
+                  color: "white",
+                  border: "1px solid #3f51b5",
+                  flex: 1,
+                }}
+              >
+                Download Labels
+              </button>
+              <div style={{ width: "1px", backgroundColor: "#B0BEC5" }}></div>
+              <button
+                onClick={handleUseModel}
+                style={{
+                  padding: "10px 20px",
+                  fontSize: "16px",
+                  cursor: "pointer",
+                  backgroundColor: "#3f51b5",
+                  color: "white",
+                  border: "1px solid #3f51b5",
+                  flex: 1,
+                }}
+              >
+                Use Model
+              </button>
+              <div style={{ width: "1px", backgroundColor: "#B0BEC5" }}></div>
+              <button
+                onClick={handleClearLabels}
+                style={{
+                  padding: "10px 20px",
+                  fontSize: "16px",
+                  cursor: "pointer",
+                  backgroundColor: "#3f51b5",
+                  color: "white",
+                  border: "1px solid #3f51b5",
+                  flex: 1,
+                }}
+              >
+                Clear Labels
+              </button>
+              <div style={{ width: "1px", backgroundColor: "#B0BEC5" }}></div>
+              <button
+                onClick={handleReloadFromDatabase}
+                style={{
+                  padding: "10px 20px",
+                  fontSize: "16px",
+                  cursor: "pointer",
+                  backgroundColor: "#3f51b5",
+                  color: "white",
+                  border: "1px solid #3f51b5",
+                  flex: 1,
+                }}
+              >
+                Reload from Database
+              </button>
+            </div>
           </div>
         </div>
       ) : (
