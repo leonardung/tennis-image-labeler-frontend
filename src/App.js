@@ -8,7 +8,6 @@ function App() {
   const [coordinates, setCoordinates] = useState({});
   const [files, setFiles] = useState([]);
   const [folderPath, setFolderPath] = useState("");
-  const [progress, setProgress] = useState(0);
 
   useEffect(() => {
     const handleKeyDown = (event) => {
@@ -210,9 +209,12 @@ function App() {
 
   function updateProgressBar(progress) {
     const progressBar = document.getElementById('progressBar');
-    setProgress(progress);
+    const progressText = document.getElementById('progressText');
+
     progressBar.style.width = `${progress}%`;
+    progressText.textContent = `${Math.round(progress)}%`;
   }
+
 
   const handleClearLabels = () => {
     setCoordinates({});
@@ -275,7 +277,7 @@ function App() {
               onClick={handleImageClick}
               style={{
                 maxWidth: "100%",
-                maxHeight: "67vh",
+                maxHeight: "66vh",
                 cursor: "crosshair",
                 display: "block",
               }}
@@ -339,7 +341,7 @@ function App() {
               disabled={currentIndex === 0}
               style={{
                 cursor: currentIndex === 0 ? "not-allowed" : "pointer",
-                backgroundColor: currentIndex === 0 ? "#ccc" : "#2196F3",
+                backgroundColor: currentIndex === 0 ? "#B0BEC5" : "#2196F3",
                 padding: "10px 20px",
                 fontSize: "16px",
                 cursor: "pointer",
@@ -359,7 +361,7 @@ function App() {
                     ? "not-allowed"
                     : "pointer",
                 backgroundColor:
-                  currentIndex === images.length - 1 ? "#ccc" : "#2196F3",
+                  currentIndex === images.length - 1 ? "#B0BEC5" : "#2196F3",
                 padding: "10px 20px",
                 fontSize: "16px",
                 cursor: "pointer",
@@ -440,7 +442,7 @@ function App() {
               >
                 Clear Labels
               </button>
-              <div style={{ width: "1px", backgroundColor: "#B0BEC5" }}></div>
+              <div style={{ width: "1px", backgroundColor: "#2196F3" }}></div>
               <button
                 onClick={handleReloadFromDatabase}
                 style={{
@@ -461,8 +463,9 @@ function App() {
             <div
               id="progressContainer"
               style={{
+                position: "relative",
                 width: "20%",
-                backgroundColor: "#2196F3",
+                backgroundColor: "#B0BEC5", // Adjusted for better contrast
                 overflow: "hidden",
                 border: "1px solid #B0BEC5",
               }}
@@ -470,20 +473,29 @@ function App() {
               <div
                 id="progressBar"
                 style={{
-                  width: '0%',
-                  height: '30px',
-                  backgroundColor: "#3f51b5",
-                  transition: 'width 0.5s ease-in-out',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  color: 'white',
-                  fontWeight: 'bold',
+                  width: "0px",
+                  height: "30px",
+                  backgroundColor: "#2196F3",
+                  transition: "width 0.5s ease-in-out",
                 }}
               >
-                {/* Percentage Text */}
-                <span id="progressText">{Math.round(progress)}%</span>
               </div>
+              <div
+                id="progressText"
+                style={{
+                  position: "absolute",
+                  top: 0,
+                  left: 0,
+                  width: "100%",
+                  height: "100%",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  color: "white",
+                  fontWeight: "bold",
+                  pointerEvents: "none",
+                }}
+              >0%</div>
             </div>
           </div>
 
