@@ -8,6 +8,7 @@ function App() {
   const [coordinates, setCoordinates] = useState({});
   const [files, setFiles] = useState([]);
   const [folderPath, setFolderPath] = useState("");
+  const [progress, setProgress] = useState(0);
 
   useEffect(() => {
     const handleKeyDown = (event) => {
@@ -143,8 +144,13 @@ function App() {
         updateProgressBar(progress);
 
         // Handle received coordinates
-        const coordinates = data.coordinates;
-        // Process the coordinates as needed
+        const newCoordinates = data.coordinates;
+
+        // Update the coordinates state
+        setCoordinates((prevCoordinates) => {
+          // If coordinates is an object, merge the new coordinates
+          return { ...prevCoordinates, ...newCoordinates };
+        });
 
         // Send next batch
         sendNextBatch();
@@ -204,6 +210,7 @@ function App() {
 
   function updateProgressBar(progress) {
     const progressBar = document.getElementById('progressBar');
+    setProgress(progress);
     progressBar.style.width = `${progress}%`;
   }
 
@@ -268,7 +275,7 @@ function App() {
               onClick={handleImageClick}
               style={{
                 maxWidth: "100%",
-                maxHeight: "72vh",
+                maxHeight: "67vh",
                 cursor: "crosshair",
                 display: "block",
               }}
@@ -450,8 +457,34 @@ function App() {
               </button>
             </div>
           </div>
-          <div id="progressContainer" style={{ width: '100%', backgroundColor: '#ddd' }}>
-            <div id="progressBar" style={{ width: '0%', height: '30px', backgroundColor: '#4caf50' }}></div>
+          <div style={{ display: "flex", justifyContent: "center", marginTop: "20px" }}>
+            <div
+              id="progressContainer"
+              style={{
+                width: "20%",
+                backgroundColor: "#2196F3",
+                overflow: "hidden",
+                border: "1px solid #B0BEC5",
+              }}
+            >
+              <div
+                id="progressBar"
+                style={{
+                  width: '0%',
+                  height: '30px',
+                  backgroundColor: "#3f51b5",
+                  transition: 'width 0.5s ease-in-out',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: 'white',
+                  fontWeight: 'bold',
+                }}
+              >
+                {/* Percentage Text */}
+                <span id="progressText">{Math.round(progress)}%</span>
+              </div>
+            </div>
           </div>
 
         </div>
