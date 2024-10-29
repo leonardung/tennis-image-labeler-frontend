@@ -120,32 +120,92 @@ function App() {
     a.click();
   };
 
-  const handleUseModel = async () => {
-    const batchSize = 10;
-    const stepSize = 2;
+  const handleUseModel = () => {
+    const batchSize = 3;
+    const stepSize = 1;
+    const totalBatches = Math.ceil((files.length - batchSize) / stepSize) + 1;
+    let batchesProcessed = 0;
+    let currentIndex = 0;
 
-    for (let i = 0; i < files.length - stepSize; i += batchSize - stepSize) {
-      const formData = new FormData();
-      files.slice(i, i + batchSize).forEach((file) => {
-        formData.append("images", file);
-      });
-      formData.append("folder_path", folderPath);
+    // Establish WebSocket connection
+    const socket = new WebSocket('ws://localhost:8000/ws/process-images/');
 
-      try {
-        const response = await axios.post(
-          "http://localhost:8000/api/calculate-coordinates/",
-          formData,
-          {
-            headers: {
-              "Content-Type": "multipart/form-data",
-            },
-          }
-        );
-      } catch (error) {
-        console.error("Error uploading images: ", error);
+    socket.onopen = () => {
+      sendNextBatch();
+    };
+
+    socket.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+      if (data.status === 'success') {
+        batchesProcessed += 1;
+        // Update progress bar
+        const progress = (batchesProcessed / totalBatches) * 100;
+        updateProgressBar(progress);
+
+        // Handle received coordinates
+        const coordinates = data.coordinates;
+        // Process the coordinates as needed
+
+        // Send next batch
+        sendNextBatch();
+      } else {
+        console.error('Error from server:', data.message);
+      }
+    };
+
+    socket.onerror = (error) => {
+      console.error('WebSocket error:', error);
+    };
+
+    socket.onclose = () => {
+      console.log('WebSocket connection closed');
+    };
+
+    function sendNextBatch() {
+      if (currentIndex <= files.length - batchSize) {
+        const batchFiles = files.slice(currentIndex, currentIndex + batchSize);
+
+        const imagesDataPromises = batchFiles.map((file) => {
+          return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = (event) => {
+              const base64Content = event.target.result.split(',')[1]; // Remove data URL prefix
+              resolve({
+                name: file.name,
+                content: base64Content,
+              });
+            };
+            reader.onerror = (error) => reject(error);
+            reader.readAsDataURL(file);
+          });
+        });
+
+        Promise.all(imagesDataPromises)
+          .then((images) => {
+            // Send data via WebSocket
+            socket.send(
+              JSON.stringify({
+                images: images,
+                folder_path: folderPath,
+              })
+            );
+          })
+          .catch((error) => {
+            console.error('Error reading files:', error);
+          });
+
+        currentIndex += stepSize;
+      } else {
+        // All batches have been processed
+        socket.close();
       }
     }
   };
+
+  function updateProgressBar(progress) {
+    const progressBar = document.getElementById('progressBar');
+    progressBar.style.width = `${progress}%`;
+  }
 
   const handleClearLabels = () => {
     setCoordinates({});
@@ -220,16 +280,14 @@ function App() {
                 style={{
                   position: "absolute",
                   pointerEvents: "none",
-                  top: `${
-                    (coordinates[files[currentIndex].name].y /
-                      document.getElementById("image").naturalHeight) *
+                  top: `${(coordinates[files[currentIndex].name].y /
+                    document.getElementById("image").naturalHeight) *
                     100
-                  }%`,
-                  left: `${
-                    (coordinates[files[currentIndex].name].x /
-                      document.getElementById("image").naturalWidth) *
+                    }%`,
+                  left: `${(coordinates[files[currentIndex].name].x /
+                    document.getElementById("image").naturalWidth) *
                     100
-                  }%`,
+                    }%`,
                   transform: "translate(-50%, -50%)",
                 }}
               >
@@ -262,8 +320,8 @@ function App() {
             Coordinates:{" "}
             {coordinates[files[currentIndex]?.name]
               ? `(${coordinates[files[currentIndex].name].x.toFixed(
-                  2
-                )}, ${coordinates[files[currentIndex].name].y.toFixed(2)})`
+                2
+              )}, ${coordinates[files[currentIndex].name].y.toFixed(2)})`
               : "None"}
           </p>
 
@@ -392,6 +450,10 @@ function App() {
               </button>
             </div>
           </div>
+          <div id="progressContainer" style={{ width: '100%', backgroundColor: '#ddd' }}>
+            <div id="progressBar" style={{ width: '0%', height: '30px', backgroundColor: '#4caf50' }}></div>
+          </div>
+
         </div>
       ) : (
         // Message to display when no images are loaded
