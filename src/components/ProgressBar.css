@@ -1,0 +1,34 @@
+/* ProgressBar.css */
+.progress-bar-container {
+  display: flex;
+  justify-content: center;
+  margin-top: 20px;
+}
+
+.progress-bar-background {
+  position: relative;
+  width: 20%;
+  background-color: #b0bec5;
+  overflow: hidden;
+  border: 1px solid #b0bec5;
+}
+
+.progress-bar-foreground {
+  height: 30px;
+  background-color: #2196f3;
+  transition: width 0.5s ease-in-out;
+}
+
+.progress-bar-text {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: bold;
+  pointer-events: none;
+}

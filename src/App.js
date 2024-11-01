@@ -1,6 +1,10 @@
 // App.js
 import React, { useState, useEffect } from "react";
 import "./App.css";
+import "./components/NavigationButtons.css";
+import "./components/ImageDisplay.css";
+import "./components/Controls.css";
+import "./components/ProgressBar.css";
 import axios from "axios";
 
 import ImageDisplay from "./components/ImageDisplay";
