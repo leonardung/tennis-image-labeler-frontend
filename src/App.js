@@ -1,6 +1,12 @@
+// App.js
 import React, { useState, useEffect } from "react";
 import "./App.css";
 import axios from "axios";
+
+import ImageDisplay from "./components/ImageDisplay";
+import NavigationButtons from "./components/NavigationButtons";
+import Controls from "./components/Controls";
+import ProgressBar from "./components/ProgressBar";
 
 function App() {
   const [images, setImages] = useState([]);
@@ -8,7 +14,9 @@ function App() {
   const [coordinates, setCoordinates] = useState({});
   const [files, setFiles] = useState([]);
   const [folderPath, setFolderPath] = useState("");
+  const [progress, setProgress] = useState(0);
 
+  // Handle keyboard navigation
   useEffect(() => {
     const handleKeyDown = (event) => {
       if (event.key === "a") {
@@ -24,10 +32,11 @@ function App() {
     };
   }, [currentIndex, images]);
 
+  // Function to select a folder and load images
   const handleSelectFolder = async () => {
     const input = document.createElement("input");
     input.type = "file";
-    input.webkitdirectory = true;
+    input.webkitdirectory = true; // Note: This is a non-standard attribute
     input.multiple = true;
     input.onchange = async (event) => {
       const selectedFiles = Array.from(event.target.files);
@@ -57,6 +66,7 @@ function App() {
     input.click();
   };
 
+  // Function to handle image click and record coordinates
   const handleImageClick = (event) => {
     const img = event.target;
     const rect = img.getBoundingClientRect();
@@ -64,26 +74,28 @@ function App() {
     const scaleY = img.naturalHeight / rect.height;
     const x = (event.clientX - rect.left) * scaleX;
     const y = (event.clientY - rect.top) * scaleY;
-    const baseImageName = files[currentIndex].name.split("_")[0];
+    const imageName = files[currentIndex].name;
     const newCoordinates = {
       ...coordinates,
-      [baseImageName]: { x, y },
+      [imageName]: { x, y },
     };
     setCoordinates(newCoordinates);
   };
 
+  // Navigation functions
   const handleNextImage = () => {
     if (currentIndex < images.length - 1) {
-      setCurrentIndex(currentIndex + 1);
+      setCurrentIndex((prevIndex) => prevIndex + 1);
     }
   };
 
   const handlePrevImage = () => {
     if (currentIndex > 0) {
-      setCurrentIndex(currentIndex - 1);
+      setCurrentIndex((prevIndex) => prevIndex - 1);
     }
   };
 
+  // Function to save coordinates to backend
   const saveCoordinatesToBackend = async () => {
     const coordinatesArray = Object.keys(coordinates).map((imageName) => {
       const { x, y } = coordinates[imageName];
@@ -104,6 +116,7 @@ function App() {
     }
   };
 
+  // Function to download labels as CSV
   const handleSaveLabels = () => {
     const csvContent = [
       ["image_name", "x", "y"],
@@ -120,15 +133,16 @@ function App() {
     a.click();
   };
 
+  // Function to use the model for labeling
   const handleUseModel = () => {
     const batchSize = 3;
     const stepSize = 1;
     const totalBatches = Math.ceil((files.length - batchSize) / stepSize) + 1;
     let batchesProcessed = 0;
-    let currentIndex = 0;
+    let currentBatchIndex = 0;
 
     // Establish WebSocket connection
-    const socket = new WebSocket('ws://localhost:8000/ws/process-images/');
+    const socket = new WebSocket("ws://localhost:8000/ws/process-images/");
 
     socket.onopen = () => {
       sendNextBatch();
@@ -136,45 +150,47 @@ function App() {
 
     socket.onmessage = (event) => {
       const data = JSON.parse(event.data);
-      if (data.status === 'success') {
+      if (data.status === "success") {
         batchesProcessed += 1;
-        // Update progress bar
-        const progress = (batchesProcessed / totalBatches) * 100;
-        updateProgressBar(progress);
+        // Update progress
+        const newProgress = (batchesProcessed / totalBatches) * 100;
+        setProgress(newProgress);
 
         // Handle received coordinates
         const newCoordinates = data.coordinates;
 
         // Update the coordinates state
         setCoordinates((prevCoordinates) => {
-          // If coordinates is an object, merge the new coordinates
           return { ...prevCoordinates, ...newCoordinates };
         });
 
         // Send next batch
         sendNextBatch();
       } else {
-        console.error('Error from server:', data.message);
+        console.error("Error from server:", data.message);
       }
     };
 
     socket.onerror = (error) => {
-      console.error('WebSocket error:', error);
+      console.error("WebSocket error:", error);
     };
 
     socket.onclose = () => {
-      console.log('WebSocket connection closed');
+      console.log("WebSocket connection closed");
     };
 
     function sendNextBatch() {
-      if (currentIndex <= files.length - batchSize) {
-        const batchFiles = files.slice(currentIndex, currentIndex + batchSize);
+      if (currentBatchIndex <= files.length - batchSize) {
+        const batchFiles = files.slice(
+          currentBatchIndex,
+          currentBatchIndex + batchSize
+        );
 
         const imagesDataPromises = batchFiles.map((file) => {
           return new Promise((resolve, reject) => {
             const reader = new FileReader();
             reader.onload = (event) => {
-              const base64Content = event.target.result.split(',')[1]; // Remove data URL prefix
+              const base64Content = event.target.result.split(",")[1];
               resolve({
                 name: file.name,
                 content: base64Content,
@@ -196,10 +212,10 @@ function App() {
             );
           })
           .catch((error) => {
-            console.error('Error reading files:', error);
+            console.error("Error reading files:", error);
           });
 
-        currentIndex += stepSize;
+        currentBatchIndex += stepSize;
       } else {
         // All batches have been processed
         socket.close();
@@ -207,19 +223,12 @@ function App() {
     }
   };
 
-  function updateProgressBar(progress) {
-    const progressBar = document.getElementById('progressBar');
-    const progressText = document.getElementById('progressText');
-
-    progressBar.style.width = `${progress}%`;
-    progressText.textContent = `${Math.round(progress)}%`;
-  }
-
-
+  // Function to clear labels
   const handleClearLabels = () => {
     setCoordinates({});
   };
 
+  // Function to reload labels from the database
   const handleReloadFromDatabase = async () => {
     try {
       const response = await axios.get(
@@ -233,276 +242,46 @@ function App() {
     }
   };
 
-  // Main component rendering the application
   return (
-    <div
-      className="App"
-      style={{ textAlign: "center", fontFamily: "Arial, sans-serif" }}
-    >
-      <header style={{ margin: "20px" }}>
-        {/* Button to select a folder containing images */}
-        <button
-          onClick={handleSelectFolder}
-          style={{
-            padding: "10px 20px",
-            fontSize: "16px",
-            cursor: "pointer",
-            backgroundColor: "#4CAF50",
-            color: "white",
-            border: "1px solid #4CAF50",
-          }}
-        >
+    <div className="App">
+      <header className="header">
+        <button className="select-folder-button" onClick={handleSelectFolder}>
           Select Folder
         </button>
       </header>
-
-      {/* Check if there are images to display */}
       {images.length > 0 ? (
         <div>
-          <div
-            style={{
-              border: "2px solid black",
-              display: "inline-block",
-              position: "relative",
-              boxShadow: "0px 4px 8px rgba(0, 0, 0, 0.2)",
-              marginBottom: "10px",
-              verticalAlign: "top",
-            }}
-          >
-            {/* Display the current image */}
-            <img
-              id="image"
-              src={images[currentIndex]}
-              alt="Label"
-              onClick={handleImageClick}
-              style={{
-                maxWidth: "100%",
-                maxHeight: "66vh",
-                cursor: "crosshair",
-                display: "block",
-              }}
-            />
-
-            {/* Display crosshairs at the labeled coordinate if available */}
-            {coordinates[files[currentIndex]?.name] && (
-              <div
-                style={{
-                  position: "absolute",
-                  pointerEvents: "none",
-                  top: `${(coordinates[files[currentIndex].name].y /
-                    document.getElementById("image").naturalHeight) *
-                    100
-                    }%`,
-                  left: `${(coordinates[files[currentIndex].name].x /
-                    document.getElementById("image").naturalWidth) *
-                    100
-                    }%`,
-                  transform: "translate(-50%, -50%)",
-                }}
-              >
-                {/* Horizontal part of the crosshair */}
-                <div
-                  style={{
-                    position: "absolute",
-                    width: "20px",
-                    height: "2px",
-                    backgroundColor: "red",
-                    transform: "translate(-50%, -50%) rotate(0deg)",
-                  }}
-                ></div>
-                {/* Vertical part of the crosshair */}
-                <div
-                  style={{
-                    position: "absolute",
-                    width: "20px",
-                    height: "2px",
-                    backgroundColor: "red",
-                    transform: "translate(-50%, -50%) rotate(90deg)",
-                  }}
-                ></div>
-              </div>
-            )}
-          </div>
-
-          {/* Display the coordinates of the labeled point */}
-          <p style={{ margin: "5px 0", fontSize: "18px" }}>
+          <ImageDisplay
+            imageSrc={images[currentIndex]}
+            coordinates={coordinates}
+            onImageClick={handleImageClick}
+            imageName={files[currentIndex]?.name}
+          />
+          <p className="coordinates-text">
             Coordinates:{" "}
             {coordinates[files[currentIndex]?.name]
               ? `(${coordinates[files[currentIndex].name].x.toFixed(
-                2
-              )}, ${coordinates[files[currentIndex].name].y.toFixed(2)})`
+                  2
+                )}, ${coordinates[files[currentIndex].name].y.toFixed(2)})`
               : "None"}
           </p>
-
-          {/* Buttons to navigate between images */}
-          <div style={{ marginBottom: "20px" }}>
-            <button
-              onClick={handlePrevImage}
-              disabled={currentIndex === 0}
-              style={{
-                cursor: currentIndex === 0 ? "not-allowed" : "pointer",
-                backgroundColor: currentIndex === 0 ? "#B0BEC5" : "#2196F3",
-                padding: "10px 20px",
-                fontSize: "16px",
-                cursor: "pointer",
-                color: "white",
-                border: "0px solid #E0E0E0",
-                flex: 1,
-              }}
-            >
-              Previous Image
-            </button>
-            <button
-              onClick={handleNextImage}
-              disabled={currentIndex === images.length - 1}
-              style={{
-                cursor:
-                  currentIndex === images.length - 1
-                    ? "not-allowed"
-                    : "pointer",
-                backgroundColor:
-                  currentIndex === images.length - 1 ? "#B0BEC5" : "#2196F3",
-                padding: "10px 20px",
-                fontSize: "16px",
-                cursor: "pointer",
-                color: "white",
-                flex: 1,
-                border: "1px solid #E0E0E0",
-              }}
-            >
-              Next Image
-            </button>
-          </div>
-
-          {/* Buttons to save labels or use a model for labeling */}
-          <div style={{ display: "flex", justifyContent: "center" }}>
-            <div
-              style={{
-                display: "flex",
-                backgroundColor: "#E0E0E0",
-                borderRadius: "8px",
-              }}
-            >
-              <button
-                onClick={saveCoordinatesToBackend}
-                style={{
-                  padding: "10px 20px",
-                  fontSize: "16px",
-                  cursor: "pointer",
-                  backgroundColor: "#3f51b5",
-                  color: "white",
-                  border: "1px solid #3f51b5",
-                  flex: 1,
-                }}
-              >
-                Save Labels to Database
-              </button>
-              <div style={{ width: "1px", backgroundColor: "#B0BEC5" }}></div>
-              <button
-                onClick={handleSaveLabels}
-                style={{
-                  padding: "10px 20px",
-                  fontSize: "16px",
-                  cursor: "pointer",
-                  backgroundColor: "#3f51b5",
-                  color: "white",
-                  border: "1px solid #3f51b5",
-                  flex: 1,
-                }}
-              >
-                Download Labels
-              </button>
-              <div style={{ width: "1px", backgroundColor: "#B0BEC5" }}></div>
-              <button
-                onClick={handleUseModel}
-                style={{
-                  padding: "10px 20px",
-                  fontSize: "16px",
-                  cursor: "pointer",
-                  backgroundColor: "#3f51b5",
-                  color: "white",
-                  border: "1px solid #3f51b5",
-                  flex: 1,
-                }}
-              >
-                Use Model
-              </button>
-              <div style={{ width: "1px", backgroundColor: "#B0BEC5" }}></div>
-              <button
-                onClick={handleClearLabels}
-                style={{
-                  padding: "10px 20px",
-                  fontSize: "16px",
-                  cursor: "pointer",
-                  backgroundColor: "#3f51b5",
-                  color: "white",
-                  border: "1px solid #3f51b5",
-                  flex: 1,
-                }}
-              >
-                Clear Labels
-              </button>
-              <div style={{ width: "1px", backgroundColor: "#2196F3" }}></div>
-              <button
-                onClick={handleReloadFromDatabase}
-                style={{
-                  padding: "10px 20px",
-                  fontSize: "16px",
-                  cursor: "pointer",
-                  backgroundColor: "#3f51b5",
-                  color: "white",
-                  border: "1px solid #3f51b5",
-                  flex: 1,
-                }}
-              >
-                Reload from Database
-              </button>
-            </div>
-          </div>
-          <div style={{ display: "flex", justifyContent: "center", marginTop: "20px" }}>
-            <div
-              id="progressContainer"
-              style={{
-                position: "relative",
-                width: "20%",
-                backgroundColor: "#B0BEC5", // Adjusted for better contrast
-                overflow: "hidden",
-                border: "1px solid #B0BEC5",
-              }}
-            >
-              <div
-                id="progressBar"
-                style={{
-                  width: "0px",
-                  height: "30px",
-                  backgroundColor: "#2196F3",
-                  transition: "width 0.5s ease-in-out",
-                }}
-              >
-              </div>
-              <div
-                id="progressText"
-                style={{
-                  position: "absolute",
-                  top: 0,
-                  left: 0,
-                  width: "100%",
-                  height: "100%",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  color: "white",
-                  fontWeight: "bold",
-                  pointerEvents: "none",
-                }}
-              >0%</div>
-            </div>
-          </div>
-
+          <NavigationButtons
+            onPrev={handlePrevImage}
+            onNext={handleNextImage}
+            disablePrev={currentIndex === 0}
+            disableNext={currentIndex === images.length - 1}
+          />
+          <Controls
+            onSaveToDatabase={saveCoordinatesToBackend}
+            onDownloadLabels={handleSaveLabels}
+            onUseModel={handleUseModel}
+            onClearLabels={handleClearLabels}
+            onReloadFromDatabase={handleReloadFromDatabase}
+          />
+          <ProgressBar progress={progress} />
         </div>
       ) : (
-        // Message to display when no images are loaded
-        <p style={{ fontSize: "18px", color: "#777" }}>
+        <p className="no-images-text">
           No images loaded. Please select a folder.
         </p>
       )}
