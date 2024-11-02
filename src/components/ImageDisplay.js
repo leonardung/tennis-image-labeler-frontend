@@ -1,47 +1,71 @@
-// components/ImageDisplay.js
-import React, { useRef, useEffect, useState } from "react";
+// ImageDisplay.js
+import React from "react";
 
-const ImageDisplay = ({ imageSrc, coordinates, onImageClick, imageName }) => {
-  const imageRef = useRef(null);
-  const [crosshairPosition, setCrosshairPosition] = useState(null);
-
-  // Update crosshair position when image or coordinates change
-  useEffect(() => {
-    const updateCrosshairPosition = () => {
-      if (imageRef.current && coordinates[imageName]) {
-        const img = imageRef.current;
-        const xPercent = (coordinates[imageName].x / img.naturalWidth) * 100;
-        const yPercent = (coordinates[imageName].y / img.naturalHeight) * 100;
-        setCrosshairPosition({ xPercent, yPercent });
-      } else {
-        setCrosshairPosition(null);
-      }
-    };
-
-    updateCrosshairPosition();
-  }, [coordinates, imageName]);
-
+const ImageDisplay = ({ imageSrc, coordinates, fileName, onImageClick }) => {
   return (
-    <div className="image-container">
+    <div
+      style={{
+        border: "2px solid black",
+        display: "inline-block",
+        position: "relative",
+        boxShadow: "0px 4px 8px rgba(0, 0, 0, 0.2)",
+        marginBottom: "10px",
+        verticalAlign: "top",
+      }}
+    >
+      {/* Display the current image */}
       <img
-        ref={imageRef}
+        id="image"
         src={imageSrc}
         alt="Label"
         onClick={onImageClick}
-        className="label-image"
+        style={{
+          maxWidth: "100%",
+          maxHeight: "66vh",
+          cursor: "crosshair",
+          display: "block",
+        }}
       />
-      {crosshairPosition && (
+
+      {/* Display crosshairs at the labeled coordinate if available */}
+      {coordinates[fileName] && (
         <div
-          className="crosshair"
           style={{
-            top: `${crosshairPosition.yPercent}%`,
-            left: `${crosshairPosition.xPercent}%`,
+            position: "absolute",
+            pointerEvents: "none",
+            top: `${
+              (coordinates[fileName].y /
+                document.getElementById("image").naturalHeight) *
+              100
+            }%`,
+            left: `${
+              (coordinates[fileName].x /
+                document.getElementById("image").naturalWidth) *
+              100
+            }%`,
+            transform: "translate(-50%, -50%)",
           }}
         >
-          {/* Horizontal line */}
-          <div className="horizontal-line"></div>
-          {/* Vertical line */}
-          <div className="vertical-line"></div>
+          {/* Horizontal part of the crosshair */}
+          <div
+            style={{
+              position: "absolute",
+              width: "20px",
+              height: "2px",
+              backgroundColor: "red",
+              transform: "translate(-50%, -50%) rotate(0deg)",
+            }}
+          ></div>
+          {/* Vertical part of the crosshair */}
+          <div
+            style={{
+              position: "absolute",
+              width: "20px",
+              height: "2px",
+              backgroundColor: "red",
+              transform: "translate(-50%, -50%) rotate(90deg)",
+            }}
+          ></div>
         </div>
       )}
     </div>

@@ -139,8 +139,8 @@ function App() {
 
   // Function to use the model for labeling
   const handleUseModel = () => {
-    const batchSize = 3;
-    const stepSize = 1;
+    const batchSize = 200;
+    const stepSize = 197;
     const totalBatches = Math.ceil((files.length - batchSize) / stepSize) + 1;
     let batchesProcessed = 0;
     let currentBatchIndex = 0;
@@ -184,7 +184,7 @@ function App() {
     };
 
     function sendNextBatch() {
-      if (currentBatchIndex <= files.length - batchSize) {
+      if (currentBatchIndex <= files.length) {
         const batchFiles = files.slice(
           currentBatchIndex,
           currentBatchIndex + batchSize
@@ -258,9 +258,10 @@ function App() {
           <ImageDisplay
             imageSrc={images[currentIndex]}
             coordinates={coordinates}
+            fileName={files[currentIndex]?.name}
             onImageClick={handleImageClick}
-            imageName={files[currentIndex]?.name}
           />
+
           <p className="coordinates-text">
             Coordinates:{" "}
             {coordinates[files[currentIndex]?.name]
