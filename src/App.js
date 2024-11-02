@@ -44,27 +44,54 @@ function App() {
     input.multiple = true;
     input.onchange = async (event) => {
       const selectedFiles = Array.from(event.target.files);
-      const imageFiles = selectedFiles
-        .filter((file) => file.type.startsWith("image/"))
-        .map((file) => URL.createObjectURL(file));
-      setImages(imageFiles);
-      setFiles(selectedFiles);
+      const imageFiles = selectedFiles.filter((file) =>
+        file.type.startsWith("image/")
+      );
+      setFiles(imageFiles);
       setCurrentIndex(0);
       setCoordinates({});
 
       const path = selectedFiles[0]?.webkitRelativePath.split("/")[0];
       setFolderPath(path);
 
-      // Load coordinates from backend
-      try {
-        const response = await axios.get(
-          `http://localhost:8000/api/get-coordinates/?folder_path=${path}`
-        );
-        if (response.data) {
-          setCoordinates(response.data.coordinates);
+      // Batch upload files
+      const batchSize = 50; // Adjust based on your needs and server capacity
+      for (let i = 0; i < imageFiles.length; i += batchSize) {
+        const batchFiles = imageFiles.slice(i, i + batchSize);
+
+        // Create FormData for the batch
+        const formData = new FormData();
+        formData.append("folder_path", path);
+        batchFiles.forEach((file) => {
+          formData.append("images", file);
+        });
+
+        // Upload the batch
+        try {
+          const response = await axios.post(
+            "http://localhost:8000/api/upload-images/",
+            formData,
+            {
+              headers: {
+                "Content-Type": "multipart/form-data",
+              },
+            }
+          );
+          // Handle the response
+          if (response.data) {
+            setImages((prevImages) => [
+              ...prevImages,
+              ...response.data.image_urls,
+            ]);
+            setCoordinates((prevCoords) => ({
+              ...prevCoords,
+              ...response.data.coordinates,
+            }));
+          }
+        } catch (error) {
+          console.error("Error uploading batch: ", error);
+          // Optionally handle the error, e.g., retry logic or user notification
         }
-      } catch (error) {
-        console.error("Error loading coordinates: ", error);
       }
     };
     input.click();
