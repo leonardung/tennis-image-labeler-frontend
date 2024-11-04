@@ -1,6 +1,6 @@
-// Thumbnail.js
 import React, { useRef, useEffect } from "react";
 import { FixedSizeGrid } from "react-window";
+import { Box, Typography } from "@mui/material";
 
 function ThumbnailGrid({ images, onThumbnailClick, currentIndex, coordinates, files }) {
   const gridRef = useRef(null);
@@ -12,41 +12,36 @@ function ThumbnailGrid({ images, onThumbnailClick, currentIndex, coordinates, fi
     if (index >= images.length) return null;
 
     const image = images[index];
-    const hasCoordinates = coordinates[files[index].name]; // Assume image has a `name` property for identification
+    const hasCoordinates = coordinates[files[index].name];
 
     return (
-      <div
+      <Box
         style={style}
-        className={`thumbnail-item ${index === currentIndex ? "selected" : ""}`}
         onClick={() => onThumbnailClick(index)}
+        border={index === currentIndex ? 2 : 0}
+        borderColor="primary.main"
+        sx={{ cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
       >
         <img
           src={image.thumbnailUrl || image.url}
           alt={`Thumbnail ${index}`}
           loading="lazy"
-          className={!hasCoordinates ? "no-labels" : ""}
+          style={{ width: "100%", height: "100%", opacity: hasCoordinates ? 1 : 0.7 }}
         />
-        {/* Overlay with "No labels" text if coordinates are missing */}
         {!hasCoordinates && (
-          <div className="no-labels-overlay">
-            <span>No labels</span>
-          </div>
+          <Box position="absolute" top={0} left={0} width="100%" height="100%" display="flex" justifyContent="center" alignItems="center" bgcolor="rgba(0,0,0,0.5)">
+            <Typography variant="caption" color="white">No labels</Typography>
+          </Box>
         )}
-      </div>
+      </Box>
     );
   };
-
 
   useEffect(() => {
     if (gridRef.current) {
       const rowIndex = Math.floor(currentIndex / columnCount);
       const columnIndex = currentIndex % columnCount;
-
-      gridRef.current.scrollToItem({
-        rowIndex,
-        columnIndex,
-        align: "smart",
-      });
+      gridRef.current.scrollToItem({ rowIndex, columnIndex, align: "smart" });
     }
   }, [currentIndex]);
 

@@ -1,16 +1,15 @@
-// components/ProgressBar.js
 import React from "react";
+import { LinearProgress, Box, Typography } from "@mui/material";
 
 const ProgressBar = ({ progress }) => (
-  <div className="progress-bar-container">
-    <div className="progress-bar-background">
-      <div
-        className="progress-bar-foreground"
-        style={{ width: `${progress}%` }}
-      ></div>
-      <div className="progress-bar-text">{`${Math.round(progress)}%`}</div>
-    </div>
-  </div>
+  <Box display="flex" alignItems="center" mt={2}>
+    <Box width="100%" mr={1}>
+      <LinearProgress variant="determinate" value={progress} />
+    </Box>
+    <Box minWidth={35}>
+      <Typography variant="body2" color="textSecondary">{`${Math.round(progress)}%`}</Typography>
+    </Box>
+  </Box>
 );
 
 export default ProgressBar;

@@ -1,13 +1,13 @@
 // App.js
 import React, { useState, useEffect } from "react";
-import "./App.css";
-import "./components/NavigationButtons.css";
-import "./components/ImageDisplay.css";
-import "./components/Controls.css";
-import "./components/ProgressBar.css";
-import "./components/ThumbnailGrid.css";
+// import "./App.css";
+// import "./components/NavigationButtons.css";
+// import "./components/ImageDisplay.css";
+// import "./components/Controls.css";
+// import "./components/ProgressBar.css";
+// import "./components/ThumbnailGrid.css";
 import axios from "axios";
-import { Button, Typography, Box, Container } from '@mui/material';
+import { Button, Container, Typography, Box, CssBaseline } from "@mui/material";
 
 import ImageDisplay from "./components/ImageDisplay";
 import NavigationButtons from "./components/NavigationButtons";
@@ -274,58 +274,78 @@ function App() {
   };
 
   return (
-    <div className="App">
-      <header className="header">
-        <button className="select-folder-button" onClick={handleSelectFolder}>
-          Select Folder
-        </button>
-      </header>
-      {images.length > 0 ? (
-        <div className="main-content">
-          <ThumbnailGrid
-            images={images}
-            onThumbnailClick={handleThumbnailClick}
-            currentIndex={currentIndex}
-            coordinates={coordinates}
-            files={files}
-          />
-          <div className="image-container">
-            <ImageDisplay
-              imageSrc={images[currentIndex].url}
+    <Box
+      sx={{
+        minHeight: "100vh",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        background: "linear-gradient(135deg, #2193b0 0%, #6dd5ed 100%)", // Gradient background
+        color: "white", // Set default text color to white for contrast
+      }}
+    >
+      <Container
+        maxWidth="lg"
+        sx={{
+          backgroundColor: "rgba(255, 255, 255, 0.8)", // Slightly transparent background
+          borderRadius: 2,
+          boxShadow: 3,
+          padding: 4,
+        }}
+      >
+        <CssBaseline />
+        <Box mb={4}>
+          <Button variant="contained" color="primary" onClick={handleSelectFolder}>
+            Select Folder
+          </Button>
+        </Box>
+        {images.length > 0 ? (
+          <Box display="flex">
+            <ThumbnailGrid
+              images={images}
+              onThumbnailClick={handleThumbnailClick}
+              currentIndex={currentIndex}
               coordinates={coordinates}
-              fileName={files[currentIndex]?.name}
-              onImageClick={handleImageClick}
+              files={files}
             />
-            <p className="coordinates-text">
-              Coordinates:{" "}
-              {coordinates[files[currentIndex]?.name]
-                ? `(${coordinates[files[currentIndex].name].x.toFixed(
-                    0
-                  )}, ${coordinates[files[currentIndex].name].y.toFixed(0)})`
-                : "None"}
-            </p>
-            <NavigationButtons
-              onPrev={handlePrevImage}
-              onNext={handleNextImage}
-              disablePrev={currentIndex === 0}
-              disableNext={currentIndex === images.length - 1}
-            />
-            <Controls
-              onSaveToDatabase={saveCoordinatesToBackend}
-              onDownloadLabels={handleSaveLabels}
-              onUseModel={handleUseModel}
-              onClearLabels={handleClearLabels}
-              onReloadFromDatabase={handleReloadFromDatabase}
-            />
-            <ProgressBar progress={progress} />
-          </div>
-        </div>
-      ) : (
-        <p className="no-images-text">
-          No images loaded. Please select a folder.
-        </p>
-      )}
-    </div>
+            <Box flex={1} ml={2}>
+              <ImageDisplay
+                imageSrc={images[currentIndex].url}
+                coordinates={coordinates}
+                fileName={files[currentIndex]?.name}
+                onImageClick={handleImageClick}
+              />
+              <Typography variant="body1" mt={2} color="textPrimary">
+                Coordinates:{" "}
+                {coordinates[files[currentIndex]?.name]
+                  ? `(${coordinates[files[currentIndex].name].x.toFixed(
+                      0
+                    )}, ${coordinates[files[currentIndex].name].y.toFixed(0)})`
+                  : "None"}
+              </Typography>
+              <NavigationButtons
+                onPrev={handlePrevImage}
+                onNext={handleNextImage}
+                disablePrev={currentIndex === 0}
+                disableNext={currentIndex === images.length - 1}
+              />
+              <Controls
+                onSaveToDatabase={saveCoordinatesToBackend}
+                onDownloadLabels={handleSaveLabels}
+                onUseModel={handleUseModel}
+                onClearLabels={handleClearLabels}
+                onReloadFromDatabase={handleReloadFromDatabase}
+              />
+              <ProgressBar progress={progress} />
+            </Box>
+          </Box>
+        ) : (
+          <Typography variant="body1" color="textSecondary" align="center">
+            No images loaded. Please select a folder.
+          </Typography>
+        )}
+      </Container>
+    </Box>
   );
 }
 
