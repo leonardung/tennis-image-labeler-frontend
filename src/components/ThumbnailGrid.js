@@ -3,7 +3,7 @@ import { FixedSizeGrid } from "react-window";
 
 function ThumbnailGrid({ images, onThumbnailClick, currentIndex }) {
   const gridRef = useRef(null);
-  const columnCount = 3;
+  const columnCount = 4;
   const rowCount = Math.ceil(images.length / columnCount);
 
   const Cell = ({ columnIndex, rowIndex, style }) => {
@@ -46,10 +46,10 @@ function ThumbnailGrid({ images, onThumbnailClick, currentIndex }) {
       ref={gridRef}
       columnCount={columnCount}
       rowCount={rowCount}
-      columnWidth={66} // Adjust as needed
-      rowHeight={66}
-      height={600} // Adjust as needed
-      width={200}
+      columnWidth={80} // Adjust as needed
+      rowHeight={50}
+      height={800} // Adjust as needed
+      width={350}
     >
       {Cell}
     </FixedSizeGrid>
