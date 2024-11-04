@@ -1,7 +1,8 @@
+// Thumbnail.js
 import React, { useRef, useEffect } from "react";
 import { FixedSizeGrid } from "react-window";
 
-function ThumbnailGrid({ images, onThumbnailClick, currentIndex }) {
+function ThumbnailGrid({ images, onThumbnailClick, currentIndex, coordinates, files }) {
   const gridRef = useRef(null);
   const columnCount = 4;
   const rowCount = Math.ceil(images.length / columnCount);
@@ -11,6 +12,8 @@ function ThumbnailGrid({ images, onThumbnailClick, currentIndex }) {
     if (index >= images.length) return null;
 
     const image = images[index];
+    const hasCoordinates = coordinates[files[index].name]; // Assume image has a `name` property for identification
+
     return (
       <div
         style={style}
@@ -21,22 +24,28 @@ function ThumbnailGrid({ images, onThumbnailClick, currentIndex }) {
           src={image.thumbnailUrl || image.url}
           alt={`Thumbnail ${index}`}
           loading="lazy"
+          className={!hasCoordinates ? "no-labels" : ""}
         />
+        {/* Overlay with "No labels" text if coordinates are missing */}
+        {!hasCoordinates && (
+          <div className="no-labels-overlay">
+            <span>No labels</span>
+          </div>
+        )}
       </div>
     );
   };
 
+
   useEffect(() => {
     if (gridRef.current) {
-      // Calculate the row and column of the current index
       const rowIndex = Math.floor(currentIndex / columnCount);
       const columnIndex = currentIndex % columnCount;
 
-      // Scroll to the item if it's not visible
       gridRef.current.scrollToItem({
         rowIndex,
         columnIndex,
-        align: "smart", // 'smart' aligns to the nearest edge only if out of view
+        align: "smart",
       });
     }
   }, [currentIndex]);
@@ -46,9 +55,9 @@ function ThumbnailGrid({ images, onThumbnailClick, currentIndex }) {
       ref={gridRef}
       columnCount={columnCount}
       rowCount={rowCount}
-      columnWidth={80} // Adjust as needed
+      columnWidth={80}
       rowHeight={50}
-      height={800} // Adjust as needed
+      height={800}
       width={350}
     >
       {Cell}

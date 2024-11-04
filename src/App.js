@@ -7,6 +7,7 @@ import "./components/Controls.css";
 import "./components/ProgressBar.css";
 import "./components/ThumbnailGrid.css";
 import axios from "axios";
+import { Button, Typography, Box, Container } from '@mui/material';
 
 import ImageDisplay from "./components/ImageDisplay";
 import NavigationButtons from "./components/NavigationButtons";
@@ -53,7 +54,7 @@ function App() {
       setCurrentIndex(0);
       setCoordinates({});
 
-      const path = selectedFiles[0]?.webkitRelativePath.split("/")[0];
+      const path = selectedFiles[0]?.webkitRelativePath.split("/")[0].split("\\")[0];
       setFolderPath(path);
 
       // Batch upload files
@@ -130,7 +131,6 @@ function App() {
       ...coordinates,
       [imageName]: { x, y },
     };
-    console.log(newCoordinates);
     setCoordinates(newCoordinates);
   };
 
@@ -286,6 +286,8 @@ function App() {
             images={images}
             onThumbnailClick={handleThumbnailClick}
             currentIndex={currentIndex}
+            coordinates={coordinates}
+            files={files}
           />
           <div className="image-container">
             <ImageDisplay
