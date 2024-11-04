@@ -1,0 +1,30 @@
+.main-content {
+  display: flex;
+}
+
+.thumbnail-grid {
+  width: 200px;
+  max-height: 100vh;
+  overflow-y: auto;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-gap: 0px;
+}
+
+.thumbnail-item {
+  cursor: pointer;
+}
+
+.thumbnail-item.selected {
+  border: 2px solid blue;
+}
+
+.thumbnail-item img {
+  width: 90%;
+  height: auto;
+}
+
+.image-container {
+  flex: 1;
+  padding-left: 0px;
+}

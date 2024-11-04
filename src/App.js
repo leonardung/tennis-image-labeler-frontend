@@ -5,12 +5,14 @@ import "./components/NavigationButtons.css";
 import "./components/ImageDisplay.css";
 import "./components/Controls.css";
 import "./components/ProgressBar.css";
+import "./components/ThumbnailGrid.css";
 import axios from "axios";
 
 import ImageDisplay from "./components/ImageDisplay";
 import NavigationButtons from "./components/NavigationButtons";
 import Controls from "./components/Controls";
 import ProgressBar from "./components/ProgressBar";
+import ThumbnailGrid from "./components/ThumbnailGrid";
 
 function App() {
   const [images, setImages] = useState([]);
@@ -77,16 +79,34 @@ function App() {
               },
             }
           );
-          // Handle the response
-          if (response.data) {
-            setImages((prevImages) => [
-              ...prevImages,
-              ...response.data.image_urls,
-            ]);
-            setCoordinates((prevCoords) => ({
-              ...prevCoords,
-              ...response.data.coordinates,
-            }));
+          if (response.data && response.data.images) {
+            setImages((prevImages) => {
+              const prevImagesMap = {};
+              prevImages.forEach((img) => {
+                prevImagesMap[img.id] = img;
+              });
+
+              // Merge existing images with new images, keeping existing coordinates
+              const updatedImages = [
+                ...prevImages, // keep previously loaded images
+                ...response.data.images.map((newImage) => {
+                  const existingImage = prevImagesMap[newImage.id];
+                  if (existingImage) {
+                    // Keep existing coordinates if they exist
+                    return {
+                      ...newImage,
+                      coordinates:
+                        existingImage.coordinates || newImage.coordinates,
+                    };
+                  } else {
+                    // New image, add as is
+                    return newImage;
+                  }
+                }),
+              ];
+
+              return updatedImages;
+            });
           }
         } catch (error) {
           console.error("Error uploading batch: ", error);
@@ -110,6 +130,7 @@ function App() {
       ...coordinates,
       [imageName]: { x, y },
     };
+    console.log(newCoordinates);
     setCoordinates(newCoordinates);
   };
 
@@ -126,6 +147,10 @@ function App() {
     }
   };
 
+  const handleThumbnailClick = (index) => {
+    setCurrentIndex(index);
+  };
+
   // Function to save coordinates to backend
   const saveCoordinatesToBackend = async () => {
     const coordinatesArray = Object.keys(coordinates).map((imageName) => {
@@ -139,9 +164,17 @@ function App() {
     });
 
     try {
-      await axios.post("http://localhost:8000/api/save-coordinates/", {
-        coordinates: coordinatesArray,
-      });
+      await axios.post(
+        "http://localhost:8000/api/save-coordinates/",
+        {
+          coordinates: coordinatesArray,
+        },
+        {
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
     } catch (error) {
       console.error("Error saving coordinates: ", error);
     }
@@ -164,39 +197,38 @@ function App() {
     a.click();
   };
 
-  // Function to use the model for labeling
-  const handleUseModel = () => {
-    const batchSize = 200;
-    const stepSize = 197;
-    const totalBatches = Math.ceil((files.length - batchSize) / stepSize) + 1;
-    let batchesProcessed = 0;
-    let currentBatchIndex = 0;
+  const handleUseModel = async () => {
+    const totalImages = images.length;
+    let processedImages = 0;
+    setProgress(0);
 
-    // Establish WebSocket connection
     const socket = new WebSocket("ws://localhost:8000/ws/process-images/");
 
     socket.onopen = () => {
-      sendNextBatch();
+      socket.send(
+        JSON.stringify({
+          command: "process_images",
+          folder_path: folderPath,
+        })
+      );
     };
 
     socket.onmessage = (event) => {
       const data = JSON.parse(event.data);
       if (data.status === "success") {
-        batchesProcessed += 1;
-        // Update progress
-        const newProgress = (batchesProcessed / totalBatches) * 100;
+        processedImages += 1;
+        const newProgress = (processedImages / totalImages) * 100;
         setProgress(newProgress);
+        const { image_name, x, y } = data.coordinates || {};
 
-        // Handle received coordinates
-        const newCoordinates = data.coordinates;
-
-        // Update the coordinates state
-        setCoordinates((prevCoordinates) => {
-          return { ...prevCoordinates, ...newCoordinates };
-        });
-
-        // Send next batch
-        sendNextBatch();
+        if (image_name && x != null && y != null) {
+          setCoordinates((prevCoordinates) => {
+            return {
+              ...prevCoordinates,
+              [image_name]: { x, y },
+            };
+          });
+        }
       } else {
         console.error("Error from server:", data.message);
       }
@@ -209,49 +241,6 @@ function App() {
     socket.onclose = () => {
       console.log("WebSocket connection closed");
     };
-
-    function sendNextBatch() {
-      if (currentBatchIndex <= files.length) {
-        const batchFiles = files.slice(
-          currentBatchIndex,
-          currentBatchIndex + batchSize
-        );
-
-        const imagesDataPromises = batchFiles.map((file) => {
-          return new Promise((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onload = (event) => {
-              const base64Content = event.target.result.split(",")[1];
-              resolve({
-                name: file.name,
-                content: base64Content,
-              });
-            };
-            reader.onerror = (error) => reject(error);
-            reader.readAsDataURL(file);
-          });
-        });
-
-        Promise.all(imagesDataPromises)
-          .then((images) => {
-            // Send data via WebSocket
-            socket.send(
-              JSON.stringify({
-                images: images,
-                folder_path: folderPath,
-              })
-            );
-          })
-          .catch((error) => {
-            console.error("Error reading files:", error);
-          });
-
-        currentBatchIndex += stepSize;
-      } else {
-        // All batches have been processed
-        socket.close();
-      }
-    }
   };
 
   // Function to clear labels
@@ -265,8 +254,19 @@ function App() {
       const response = await axios.get(
         `http://localhost:8000/api/get-coordinates/?folder_path=${folderPath}`
       );
-      if (response.data) {
-        setCoordinates(response.data.coordinates);
+      if (response.data && response.data.coordinates) {
+        // Transform the received data to match your application's state structure
+        const newCoordinates = {};
+        for (const [imageName, coords] of Object.entries(
+          response.data.coordinates
+        )) {
+          // If multiple coordinates, you can decide how to store them
+          // For this example, we'll store the first coordinate
+          if (coords.length > 0) {
+            newCoordinates[imageName] = coords[0]; // Or handle multiple coordinates as needed
+          }
+        }
+        setCoordinates(newCoordinates);
       }
     } catch (error) {
       console.error("Error reloading coordinates: ", error);
@@ -281,36 +281,42 @@ function App() {
         </button>
       </header>
       {images.length > 0 ? (
-        <div>
-          <ImageDisplay
-            imageSrc={images[currentIndex]}
-            coordinates={coordinates}
-            fileName={files[currentIndex]?.name}
-            onImageClick={handleImageClick}
+        <div className="main-content">
+          <ThumbnailGrid
+            images={images}
+            onThumbnailClick={handleThumbnailClick}
+            currentIndex={currentIndex}
           />
-
-          <p className="coordinates-text">
-            Coordinates:{" "}
-            {coordinates[files[currentIndex]?.name]
-              ? `(${coordinates[files[currentIndex].name].x.toFixed(
-                  2
-                )}, ${coordinates[files[currentIndex].name].y.toFixed(2)})`
-              : "None"}
-          </p>
-          <NavigationButtons
-            onPrev={handlePrevImage}
-            onNext={handleNextImage}
-            disablePrev={currentIndex === 0}
-            disableNext={currentIndex === images.length - 1}
-          />
-          <Controls
-            onSaveToDatabase={saveCoordinatesToBackend}
-            onDownloadLabels={handleSaveLabels}
-            onUseModel={handleUseModel}
-            onClearLabels={handleClearLabels}
-            onReloadFromDatabase={handleReloadFromDatabase}
-          />
-          <ProgressBar progress={progress} />
+          <div className="image-container">
+            <ImageDisplay
+              imageSrc={images[currentIndex].url}
+              coordinates={coordinates}
+              fileName={files[currentIndex]?.name}
+              onImageClick={handleImageClick}
+            />
+            <p className="coordinates-text">
+              Coordinates:{" "}
+              {coordinates[files[currentIndex]?.name]
+                ? `(${coordinates[files[currentIndex].name].x.toFixed(
+                    0
+                  )}, ${coordinates[files[currentIndex].name].y.toFixed(0)})`
+                : "None"}
+            </p>
+            <NavigationButtons
+              onPrev={handlePrevImage}
+              onNext={handleNextImage}
+              disablePrev={currentIndex === 0}
+              disableNext={currentIndex === images.length - 1}
+            />
+            <Controls
+              onSaveToDatabase={saveCoordinatesToBackend}
+              onDownloadLabels={handleSaveLabels}
+              onUseModel={handleUseModel}
+              onClearLabels={handleClearLabels}
+              onReloadFromDatabase={handleReloadFromDatabase}
+            />
+            <ProgressBar progress={progress} />
+          </div>
         </div>
       ) : (
         <p className="no-images-text">
