@@ -118,22 +118,6 @@ function App() {
     input.click();
   };
 
-  // Function to handle image click and record coordinates
-  const handleImageClick = (event) => {
-    const img = event.target;
-    const rect = img.getBoundingClientRect();
-    const scaleX = img.naturalWidth / rect.width;
-    const scaleY = img.naturalHeight / rect.height;
-    const x = (event.clientX - rect.left) * scaleX;
-    const y = (event.clientY - rect.top) * scaleY;
-    const imageName = files[currentIndex].name;
-    const newCoordinates = {
-      ...coordinates,
-      [imageName]: { x, y },
-    };
-    setCoordinates(newCoordinates);
-  };
-
   // Navigation functions
   const handleNextImage = () => {
     if (currentIndex < images.length - 1) {
@@ -304,12 +288,12 @@ function App() {
           <Box flex={4} ml={2} display="flex" flexDirection="column" overflow="auto">
             <Box display="flex" flexDirection="row" flexGrow={1} overflow="auto">
               <Box display="flex" flexDirection="column" flexGrow={1} overflow="auto">
-                <Box flexGrow={1} border={2} display="flex" overflow="auto" >
+                <Box flexGrow={1} border={2} display="flex" overflow="auto">
                   <ImageDisplay
                     imageSrc={images[currentIndex].url}
                     coordinates={coordinates}
                     fileName={files[currentIndex]?.name}
-                    onImageClick={handleImageClick}
+                    onCoordinatesChange={(newCoordinates) => setCoordinates(newCoordinates)}
                   />
                 </Box>
                 <Box border={2}>
