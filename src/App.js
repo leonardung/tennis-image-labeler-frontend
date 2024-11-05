@@ -291,8 +291,8 @@ function App() {
         </Button>
       </Box>
       {images.length > 0 ? (
-        <Box display="flex" flexGrow={1} p={2}>
-          <Box flex={1}>
+        <Box display="flex" flexGrow={1} p={2} height="100vh" overflow="auto">
+          <Box flex={1} overflow="auto">
             <ThumbnailGrid
               images={images}
               onThumbnailClick={handleThumbnailClick}
@@ -301,10 +301,10 @@ function App() {
               files={files}
             />
           </Box>
-          <Box flex={4} ml={2}>
-            <Box display="flex" flexDirection="row">
-              <Box display="flex" flexDirection="row">
-                <Box flexGrow={1}>
+          <Box flex={4} ml={2} display="flex" flexDirection="column" overflow="auto">
+            <Box display="flex" flexDirection="row" flexGrow={1} overflow="auto">
+              <Box display="flex" flexDirection="column" flexGrow={1} overflow="auto">
+                <Box flexGrow={1} border={2} display="flex" overflow="auto" >
                   <ImageDisplay
                     imageSrc={images[currentIndex].url}
                     coordinates={coordinates}
@@ -312,34 +312,43 @@ function App() {
                     onImageClick={handleImageClick}
                   />
                 </Box>
-                <Box width={40} ml={2}>
-                  <NavigationButtons
-                    onPrev={handlePrevImage}
-                    onNext={handleNextImage}
-                    disablePrev={currentIndex === 0}
-                    disableNext={currentIndex === images.length - 1}
-                  />
-                  <Controls
-                    onSaveToDatabase={saveCoordinatesToBackend}
-                    onDownloadLabels={handleSaveLabels}
-                    onUseModel={handleUseModel}
-                    onClearLabels={handleClearLabels}
-                    onReloadFromDatabase={handleReloadFromDatabase}
-                  />
+                <Box border={2}>
+                  <Typography variant="body1" color="textSecondary" fontWeight="bold">
+                    {coordinates[files[currentIndex]?.name]
+                      ? (
+                        <>
+                          x: {coordinates[files[currentIndex].name].x.toFixed(0)} |
+                          y: {coordinates[files[currentIndex].name].y.toFixed(0)}
+                        </>
+                      )
+                      : 'No coordinates available'}
+                  </Typography>
+                  <ProgressBar progress={progress} />
                 </Box>
               </Box>
+              <Box
+                width={60}
+                border={2}
+                display="flex"
+                flexDirection="column"
+                justifyContent="center"
+                alignItems="flex-start"
+              >
+                <NavigationButtons
+                  onPrev={handlePrevImage}
+                  onNext={handleNextImage}
+                  disablePrev={currentIndex === 0}
+                  disableNext={currentIndex === images.length - 1}
+                />
+                <Controls
+                  onSaveToDatabase={saveCoordinatesToBackend}
+                  onDownloadLabels={handleSaveLabels}
+                  onUseModel={handleUseModel}
+                  onClearLabels={handleClearLabels}
+                  onReloadFromDatabase={handleReloadFromDatabase}
+                />
+              </Box>
             </Box>
-            <Typography variant="body1" color="textSecondary" fontWeight="bold">
-              {coordinates[files[currentIndex]?.name]
-                ? (
-                  <>
-                    x: {coordinates[files[currentIndex].name].x.toFixed(0)} |
-                    y: {coordinates[files[currentIndex].name].y.toFixed(0)}
-                  </>
-                )
-                : 'No coordinates available'}
-            </Typography>
-            <ProgressBar progress={progress} />
           </Box>
         </Box>
 
@@ -347,8 +356,9 @@ function App() {
         <Typography variant="body1" color="textSecondary" align="center">
           No images loaded. Please select a folder.
         </Typography>
-      )}
-    </Box>
+      )
+      }
+    </Box >
   );
 
 }
