@@ -3,7 +3,13 @@ import React, { useRef, useState, useEffect } from "react";
 const ImageDisplay = ({ imageSrc, coordinates, fileName, onCoordinatesChange }) => {
   const imageRef = useRef(null);
   const containerRef = useRef(null);
-  const [displayParams, setDisplayParams] = useState(null);
+
+  // State variables for zoom level, pan offset, and image dimensions
+  const [zoomLevel, setZoomLevel] = useState(1);
+  const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
+  const [imgDimensions, setImgDimensions] = useState({ width: 0, height: 0 });
+  const [isPanning, setIsPanning] = useState(false);
+  const [panStart, setPanStart] = useState({ x: 0, y: 0 });
 
   const calculateDisplayParams = () => {
     if (!imageRef.current || !containerRef.current) {
@@ -21,34 +27,23 @@ const ImageDisplay = ({ imageSrc, coordinates, fileName, onCoordinatesChange }) 
     const containerWidth = containerRect.width;
     const containerHeight = containerRect.height;
 
-    const imgAspectRatio = imgNaturalWidth / imgNaturalHeight;
-    const containerAspectRatio = containerWidth / containerHeight;
+    const scaleX = containerWidth / imgNaturalWidth;
+    const scaleY = containerHeight / imgNaturalHeight;
 
-    let displayedWidth, displayedHeight, offsetX, offsetY;
+    // Initial zoom level to fit the image into the container
+    const initialZoomLevel = Math.min(scaleX, scaleY);
 
-    if (containerAspectRatio > imgAspectRatio) {
-      // Image fills container's height, letterboxed horizontally
-      displayedHeight = containerHeight;
-      displayedWidth = containerHeight * imgAspectRatio;
-      offsetX = (containerWidth - displayedWidth) / 2;
-      offsetY = 0;
-    } else {
-      // Image fills container's width, letterboxed vertically
-      displayedWidth = containerWidth;
-      displayedHeight = containerWidth / imgAspectRatio;
-      offsetX = 0;
-      offsetY = (containerHeight - displayedHeight) / 2;
-    }
+    // Center the image in the container
+    const initialPanOffsetX = (containerWidth - imgNaturalWidth * initialZoomLevel) / 2;
+    const initialPanOffsetY = (containerHeight - imgNaturalHeight * initialZoomLevel) / 2;
 
-    setDisplayParams({
-      displayedWidth,
-      displayedHeight,
-      offsetX,
-      offsetY,
-    });
+    setZoomLevel(initialZoomLevel);
+    setPanOffset({ x: initialPanOffsetX, y: initialPanOffsetY });
+    setImgDimensions({ width: imgNaturalWidth, height: imgNaturalHeight });
   };
 
   useEffect(() => {
+    // Recalculate display parameters when the image source changes
     calculateDisplayParams();
 
     window.addEventListener("resize", calculateDisplayParams);
@@ -57,67 +52,97 @@ const ImageDisplay = ({ imageSrc, coordinates, fileName, onCoordinatesChange }) 
     };
   }, [imageSrc]);
 
+  const handleWheel = (event) => {
+    event.preventDefault();
+
+    if (!containerRef.current) return;
+
+    const { clientX, clientY } = event;
+
+    const containerRect = containerRef.current.getBoundingClientRect();
+    const x = clientX - containerRect.left;
+    const y = clientY - containerRect.top;
+
+    // Determine the new zoom level
+    const delta = event.deltaY;
+    let newZoomLevel = zoomLevel * (delta > 0 ? 0.8 : 1.2);
+    newZoomLevel = Math.max(0.25, Math.min(newZoomLevel, 5)); // Limit zoom level
+
+    const zoomFactor = newZoomLevel / zoomLevel;
+
+    // Adjust pan offset to keep the image centered on the cursor
+    const newPanOffsetX = x - (x - panOffset.x) * zoomFactor;
+    const newPanOffsetY = y - (y - panOffset.y) * zoomFactor;
+
+    setPanOffset({ x: newPanOffsetX, y: newPanOffsetY });
+    setZoomLevel(newZoomLevel);
+  };
+
+  const handleMouseDown = (event) => {
+    setIsPanning(true);
+    setPanStart({ x: event.clientX, y: event.clientY });
+  };
+
+  const handleMouseMove = (event) => {
+    if (!isPanning) return;
+
+    const deltaX = event.clientX - panStart.x;
+    const deltaY = event.clientY - panStart.y;
+
+    setPanStart({ x: event.clientX, y: event.clientY });
+
+    setPanOffset((prevPanOffset) => ({
+      x: prevPanOffset.x + deltaX,
+      y: prevPanOffset.y + deltaY,
+    }));
+  };
+
+  const handleMouseUp = () => {
+    setIsPanning(false);
+  };
+
   const handleImageClick = (event) => {
-    if (!displayParams || !containerRef.current) {
+    if (isPanning) return; // Prevent click during panning
+
+    if (!containerRef.current || !imageRef.current) {
       return;
     }
 
     const container = containerRef.current;
     const containerRect = container.getBoundingClientRect();
 
-    const { displayedWidth, displayedHeight, offsetX, offsetY } = displayParams;
-    const imgNaturalWidth = imageRef.current.naturalWidth;
-    const imgNaturalHeight = imageRef.current.naturalHeight;
-
-    // Get click position relative to the container
     const clickX = event.clientX - containerRect.left;
     const clickY = event.clientY - containerRect.top;
 
-    // Check if click is within the displayed image area
+    // Convert click position to image coordinates
+    const imgX = (clickX - panOffset.x) / zoomLevel;
+    const imgY = (clickY - panOffset.y) / zoomLevel;
+
+    // Check if click is within the image bounds
     if (
-      clickX < offsetX ||
-      clickX > offsetX + displayedWidth ||
-      clickY < offsetY ||
-      clickY > offsetY + displayedHeight
+      imgX < 0 ||
+      imgX > imgDimensions.width ||
+      imgY < 0 ||
+      imgY > imgDimensions.height
     ) {
-      // Click is outside the image
       return;
     }
-
-    // Calculate click position relative to the image
-    const xInImage = clickX - offsetX;
-    const yInImage = clickY - offsetY;
-
-    // Scale coordinates to natural image size
-    const scaleX = imgNaturalWidth / displayedWidth;
-    const scaleY = imgNaturalHeight / displayedHeight;
-
-    const x = xInImage * scaleX;
-    const y = yInImage * scaleY;
 
     // Update coordinates
     const newCoordinates = {
       ...coordinates,
-      [fileName]: { x, y },
+      [fileName]: { x: imgX, y: imgY },
     };
     onCoordinatesChange(newCoordinates);
   };
 
   const getCrosshairPosition = () => {
-    if (!coordinates[fileName] || !displayParams) {
+    if (!coordinates[fileName]) {
       return { top: 0, left: 0 };
     }
 
-    const { displayedWidth, displayedHeight, offsetX, offsetY } = displayParams;
-    const imgNaturalWidth = imageRef.current.naturalWidth;
-    const imgNaturalHeight = imageRef.current.naturalHeight;
-
-    // Scale coordinates from natural image size to displayed size
-    const scaleX = displayedWidth / imgNaturalWidth;
-    const scaleY = displayedHeight / imgNaturalHeight;
-
-    const x = coordinates[fileName].x * scaleX + offsetX;
-    const y = coordinates[fileName].y * scaleY + offsetY;
+    const x = coordinates[fileName].x * zoomLevel + panOffset.x;
+    const y = coordinates[fileName].y * zoomLevel + panOffset.y;
 
     return {
       top: y,
@@ -130,37 +155,36 @@ const ImageDisplay = ({ imageSrc, coordinates, fileName, onCoordinatesChange }) 
   return (
     <div
       ref={containerRef}
-      style={{ position: "relative", width: "100%", height: "100%" }}
+      style={{
+        position: "relative",
+        width: "100%",
+        height: "100%",
+        overflow: "hidden",
+        cursor: isPanning ? "grabbing" : "grab",
+      }}
+      onWheel={handleWheel}
+      onMouseDown={handleMouseDown}
+      onMouseMove={handleMouseMove}
+      onMouseUp={handleMouseUp}
+      onMouseLeave={handleMouseUp}
+      onClick={handleImageClick}
     >
-      {/* Display the current image */}
       <img
         ref={imageRef}
         src={imageSrc}
         alt="Label"
+        onLoad={calculateDisplayParams}
         style={{
-          maxWidth: "100%",
-          maxHeight: "100%",
-          width: "100%",
-          height: "100%",
-          objectFit: "contain",
-          display: "block",
+          position: "absolute",
+          top: 0,
+          left: 0,
+          width: `${imgDimensions.width}px`,
+          height: `${imgDimensions.height}px`,
+          transform: `translate(${panOffset.x}px, ${panOffset.y}px) scale(${zoomLevel})`,
+          transformOrigin: "0 0",
+          userSelect: "none",
         }}
       />
-
-      {/* Overlay for cursor and click handling */}
-      {displayParams && (
-        <div
-          onClick={handleImageClick}
-          style={{
-            position: "absolute",
-            top: `${displayParams.offsetY}px`,
-            left: `${displayParams.offsetX}px`,
-            width: `${displayParams.displayedWidth}px`,
-            height: `${displayParams.displayedHeight}px`,
-            cursor: "crosshair",
-          }}
-        ></div>
-      )}
 
       {/* Display crosshairs at the labeled coordinate if available */}
       {coordinates[fileName] && (
