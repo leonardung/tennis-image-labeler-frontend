@@ -98,7 +98,7 @@ function ThumbnailGrid({ images, onThumbnailClick, currentIndex, coordinates, fi
             columnCount={columnCount}
             rowCount={rowCount}
             columnWidth={width / columnCount * 0.95} // Adjusted to fit within the parent width
-            rowHeight={60}
+            rowHeight={70}
             height={height}
             width={width}
           >

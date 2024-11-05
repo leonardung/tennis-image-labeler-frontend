@@ -270,7 +270,7 @@ function App() {
       </Box>
       {images.length > 0 ? (
         <Box display="flex" flexGrow={1} p={2} height="100vh" overflow="auto">
-          <Box flex={1} overflow="auto">
+          <Box width="350px" overflow="auto">
             <ThumbnailGrid
               images={images}
               onThumbnailClick={handleThumbnailClick}
@@ -279,7 +279,7 @@ function App() {
               files={files}
             />
           </Box>
-          <Box flex={4} ml={2} display="flex" flexDirection="column" overflow="hidden">
+          <Box flexGrow={1} ml={2} display="flex" flexDirection="column" overflow="hidden">
             <Box display="flex" flexDirection="row" flexGrow={1} overflow="auto">
               <Box display="flex" flexDirection="column" flexGrow={1} overflow="auto">
                 <Box flexGrow={1} display="flex" overflow="hidden">

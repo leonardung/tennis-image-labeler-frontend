@@ -4,12 +4,15 @@ const ImageDisplay = ({ imageSrc, coordinates, fileName, onCoordinatesChange }) 
   const imageRef = useRef(null);
   const containerRef = useRef(null);
 
-  // State variables for zoom level, pan offset, and image dimensions
+  // State variables
   const [zoomLevel, setZoomLevel] = useState(1);
   const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
   const [imgDimensions, setImgDimensions] = useState({ width: 0, height: 0 });
   const [isPanning, setIsPanning] = useState(false);
   const [panStart, setPanStart] = useState({ x: 0, y: 0 });
+
+  // State to track if the Control key is pressed
+  const [ShiftKeyPress, setShiftKeyPress] = useState(false);
 
   const calculateDisplayParams = () => {
     if (!imageRef.current || !containerRef.current) {
@@ -47,13 +50,34 @@ const ImageDisplay = ({ imageSrc, coordinates, fileName, onCoordinatesChange }) 
     calculateDisplayParams();
 
     window.addEventListener("resize", calculateDisplayParams);
+
+    // Event listeners to track Control key state
+    const handleKeyDown = (event) => {
+      if (event.key === "Shift") {
+        setShiftKeyPress(true);
+      }
+    };
+
+    const handleKeyUp = (event) => {
+      if (event.key === "Shift") {
+        setShiftKeyPress(false);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("keyup", handleKeyUp);
+
     return () => {
       window.removeEventListener("resize", calculateDisplayParams);
+      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("keyup", handleKeyUp);
     };
   }, [imageSrc]);
 
   const handleWheel = (event) => {
-    event.preventDefault();
+    // if (!event.shiftKey) return; // Only zoom when Control key is pressed
+
+    event.preventDefault(); // Prevent default browser zoom behavior
 
     if (!containerRef.current) return;
 
@@ -65,7 +89,7 @@ const ImageDisplay = ({ imageSrc, coordinates, fileName, onCoordinatesChange }) 
 
     // Determine the new zoom level
     const delta = event.deltaY;
-    let newZoomLevel = zoomLevel * (delta > 0 ? 0.8 : 1.2);
+    let newZoomLevel = zoomLevel * (delta > 0 ? 0.85 : 1.15);
     newZoomLevel = Math.max(0.25, Math.min(newZoomLevel, 5)); // Limit zoom level
 
     const zoomFactor = newZoomLevel / zoomLevel;
@@ -79,6 +103,9 @@ const ImageDisplay = ({ imageSrc, coordinates, fileName, onCoordinatesChange }) 
   };
 
   const handleMouseDown = (event) => {
+    if (!event.shiftKey) return; // Only initiate panning when Control key is pressed
+    event.preventDefault();
+
     setIsPanning(true);
     setPanStart({ x: event.clientX, y: event.clientY });
   };
@@ -102,7 +129,8 @@ const ImageDisplay = ({ imageSrc, coordinates, fileName, onCoordinatesChange }) 
   };
 
   const handleImageClick = (event) => {
-    if (isPanning) return; // Prevent click during panning
+    // Prevent click handling when panning or Control key is pressed
+    if (isPanning || ShiftKeyPress) return;
 
     if (!containerRef.current || !imageRef.current) {
       return;
@@ -160,7 +188,8 @@ const ImageDisplay = ({ imageSrc, coordinates, fileName, onCoordinatesChange }) 
         width: "100%",
         height: "100%",
         overflow: "hidden",
-        cursor: isPanning ? "grabbing" : "grab",
+        // Change cursor based on Control key and panning state
+        cursor: ShiftKeyPress ? (isPanning ? "grabbing" : "grab") : "crosshair",
       }}
       onWheel={handleWheel}
       onMouseDown={handleMouseDown}
@@ -183,6 +212,7 @@ const ImageDisplay = ({ imageSrc, coordinates, fileName, onCoordinatesChange }) 
           transform: `translate(${panOffset.x}px, ${panOffset.y}px) scale(${zoomLevel})`,
           transformOrigin: "0 0",
           userSelect: "none",
+          pointerEvents: "none", // Ensure mouse events pass through the image
         }}
       />
 
