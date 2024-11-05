@@ -1,6 +1,12 @@
 import React, { useRef, useState, useEffect } from "react";
+import { Checkbox, FormControlLabel, Box, Typography} from "@mui/material";
 
-const ImageDisplay = ({ imageSrc, coordinates, fileName, onCoordinatesChange }) => {
+const ImageDisplay = ({
+  imageSrc,
+  coordinates,
+  fileName,
+  onCoordinatesChange,
+}) => {
   const imageRef = useRef(null);
   const containerRef = useRef(null);
 
@@ -11,10 +17,27 @@ const ImageDisplay = ({ imageSrc, coordinates, fileName, onCoordinatesChange }) 
   const [isPanning, setIsPanning] = useState(false);
   const [panStart, setPanStart] = useState({ x: 0, y: 0 });
 
-  // State to track if the Control key is pressed
+  // State to track if the Shift key is pressed
   const [ShiftKeyPress, setShiftKeyPress] = useState(false);
 
+  // State for the toggle to keep or reset zoom and pan
+  const [keepZoomPan, setKeepZoomPan] = useState(true);
+
   const calculateDisplayParams = () => {
+    if (!imageRef.current || !containerRef.current) {
+      return;
+    }
+
+    const img = imageRef.current;
+
+    const imgNaturalWidth = img.naturalWidth;
+    const imgNaturalHeight = img.naturalHeight;
+
+    setImgDimensions({ width: imgNaturalWidth, height: imgNaturalHeight });
+  };
+
+  // Function to initialize zoomLevel and panOffset
+  const initializeZoomPan = () => {
     if (!imageRef.current || !containerRef.current) {
       return;
     }
@@ -37,21 +60,29 @@ const ImageDisplay = ({ imageSrc, coordinates, fileName, onCoordinatesChange }) 
     const initialZoomLevel = Math.min(scaleX, scaleY);
 
     // Center the image in the container
-    const initialPanOffsetX = (containerWidth - imgNaturalWidth * initialZoomLevel) / 2;
-    const initialPanOffsetY = (containerHeight - imgNaturalHeight * initialZoomLevel) / 2;
+    const initialPanOffsetX =
+      (containerWidth - imgNaturalWidth * initialZoomLevel) / 2;
+    const initialPanOffsetY =
+      (containerHeight - imgNaturalHeight * initialZoomLevel) / 2;
 
     setZoomLevel(initialZoomLevel);
     setPanOffset({ x: initialPanOffsetX, y: initialPanOffsetY });
-    setImgDimensions({ width: imgNaturalWidth, height: imgNaturalHeight });
   };
 
+  // useEffect to initialize zoomLevel and panOffset when the component mounts or when imageSrc changes
   useEffect(() => {
-    // Recalculate display parameters when the image source changes
+    if (!keepZoomPan) {
+      initializeZoomPan();
+    }
+  }, [imageSrc, keepZoomPan]);
+
+  useEffect(() => {
+    // Recalculate image dimensions when the image source changes
     calculateDisplayParams();
 
     window.addEventListener("resize", calculateDisplayParams);
 
-    // Event listeners to track Control key state
+    // Event listeners to track Shift key state
     const handleKeyDown = (event) => {
       if (event.key === "Shift") {
         setShiftKeyPress(true);
@@ -75,8 +106,6 @@ const ImageDisplay = ({ imageSrc, coordinates, fileName, onCoordinatesChange }) 
   }, [imageSrc]);
 
   const handleWheel = (event) => {
-    // if (!event.shiftKey) return; // Only zoom when Control key is pressed
-
     event.preventDefault(); // Prevent default browser zoom behavior
 
     if (!containerRef.current) return;
@@ -103,7 +132,7 @@ const ImageDisplay = ({ imageSrc, coordinates, fileName, onCoordinatesChange }) 
   };
 
   const handleMouseDown = (event) => {
-    if (!event.shiftKey) return; // Only initiate panning when Control key is pressed
+    if (!event.shiftKey) return; // Only initiate panning when Shift key is pressed
     event.preventDefault();
 
     setIsPanning(true);
@@ -129,7 +158,7 @@ const ImageDisplay = ({ imageSrc, coordinates, fileName, onCoordinatesChange }) 
   };
 
   const handleImageClick = (event) => {
-    // Prevent click handling when panning or Control key is pressed
+    // Prevent click handling when panning or Shift key is pressed
     if (isPanning || ShiftKeyPress) return;
 
     if (!containerRef.current || !imageRef.current) {
@@ -180,75 +209,106 @@ const ImageDisplay = ({ imageSrc, coordinates, fileName, onCoordinatesChange }) 
 
   const crosshairPosition = getCrosshairPosition();
 
-  return (
-    <div
-      ref={containerRef}
-      style={{
-        position: "relative",
-        width: "100%",
-        height: "100%",
-        overflow: "hidden",
-        // Change cursor based on Control key and panning state
-        cursor: ShiftKeyPress ? (isPanning ? "grabbing" : "grab") : "crosshair",
-      }}
-      onWheel={handleWheel}
-      onMouseDown={handleMouseDown}
-      onMouseMove={handleMouseMove}
-      onMouseUp={handleMouseUp}
-      onMouseLeave={handleMouseUp}
-      onClick={handleImageClick}
-    >
-      <img
-        ref={imageRef}
-        src={imageSrc}
-        alt="Label"
-        onLoad={calculateDisplayParams}
-        style={{
-          position: "absolute",
-          top: 0,
-          left: 0,
-          width: `${imgDimensions.width}px`,
-          height: `${imgDimensions.height}px`,
-          transform: `translate(${panOffset.x}px, ${panOffset.y}px) scale(${zoomLevel})`,
-          transformOrigin: "0 0",
-          userSelect: "none",
-          pointerEvents: "none", // Ensure mouse events pass through the image
-        }}
-      />
+  // Handler for the toggle
+  const handleToggleChange = () => {
+    setKeepZoomPan((prevValue) => !prevValue);
+  };
 
-      {/* Display crosshairs at the labeled coordinate if available */}
-      {coordinates[fileName] && (
-        <div
+  return (
+    <div style={{ position: "relative", width: "100%", height: "100%" }}>
+      {/* Toggle for keeping zoom and pan */}
+      <Box
+        sx={{
+          position: "absolute",
+          top: 10,
+          left: 10,
+          zIndex: 1,
+          backgroundColor: "rgba(250,250,250, 0.4)", // half-transparent gray
+          paddingLeft: 1,
+          borderRadius: 1,
+          color: "black"
+        }}
+      >
+        <FormControlLabel
+          control={
+            <Checkbox
+              checked={keepZoomPan}
+              onChange={handleToggleChange}
+              color="primary"
+            />
+          }
+          label={<Typography sx={{ fontWeight: "bold" }}>Keep Zoom and Pan</Typography>}
+        />
+      </Box>
+
+      <div
+        ref={containerRef}
+        style={{
+          position: "relative",
+          width: "100%",
+          height: "100%",
+          overflow: "hidden",
+          cursor: ShiftKeyPress ? (isPanning ? "grabbing" : "grab") : "crosshair",
+        }}
+        onWheel={handleWheel}
+        onMouseDown={handleMouseDown}
+        onMouseMove={handleMouseMove}
+        onMouseUp={handleMouseUp}
+        onMouseLeave={handleMouseUp}
+        onClick={handleImageClick}
+      >
+        <img
+          ref={imageRef}
+          src={imageSrc}
+          alt="Label"
+          onLoad={calculateDisplayParams}
           style={{
             position: "absolute",
-            pointerEvents: "none",
-            top: `${crosshairPosition.top}px`,
-            left: `${crosshairPosition.left}px`,
-            transform: "translate(-50%, -50%)",
+            top: 0,
+            left: 0,
+            width: `${imgDimensions.width}px`,
+            height: `${imgDimensions.height}px`,
+            transform: `translate(${panOffset.x}px, ${panOffset.y}px) scale(${zoomLevel})`,
+            transformOrigin: "0 0",
+            userSelect: "none",
+            pointerEvents: "none", // Ensure mouse events pass through the image
           }}
-        >
-          {/* Horizontal part of the crosshair */}
+        />
+
+        {/* Display crosshairs at the labeled coordinate if available */}
+        {coordinates[fileName] && (
           <div
             style={{
               position: "absolute",
-              width: "20px",
-              height: "2px",
-              backgroundColor: "red",
-              transform: "translate(-50%, -50%) rotate(0deg)",
+              pointerEvents: "none",
+              top: `${crosshairPosition.top}px`,
+              left: `${crosshairPosition.left}px`,
+              transform: "translate(-50%, -50%)",
             }}
-          ></div>
-          {/* Vertical part of the crosshair */}
-          <div
-            style={{
-              position: "absolute",
-              width: "20px",
-              height: "2px",
-              backgroundColor: "red",
-              transform: "translate(-50%, -50%) rotate(90deg)",
-            }}
-          ></div>
-        </div>
-      )}
+          >
+            {/* Horizontal part of the crosshair */}
+            <div
+              style={{
+                position: "absolute",
+                width: "20px",
+                height: "2px",
+                backgroundColor: "red",
+                transform: "translate(-50%, -50%) rotate(0deg)",
+              }}
+            ></div>
+            {/* Vertical part of the crosshair */}
+            <div
+              style={{
+                position: "absolute",
+                width: "20px",
+                height: "2px",
+                backgroundColor: "red",
+                transform: "translate(-50%, -50%) rotate(90deg)",
+              }}
+            ></div>
+          </div>
+        )}
+      </div>
     </div>
   );
 };
