@@ -1,33 +1,4 @@
-/* App.css */
-.App {
-  text-align: center;
-  font-family: Arial, sans-serif;
-  background-color: rgb(252, 252, 252);
-}
-
-.header {
-  display: flex;
-  align-items: center;
-  justify-content: flex-start; /* Aligns items to the left */
-  padding: 20px;
-  padding-bottom: 10px;
-}
-
-.select-folder-button {
-  padding: 10px 28px;
-  font-size: 16px;
-  cursor: pointer;
-  background-color: #4caf50;
-  color: white;
-  border: 1px solid #4caf50;
-}
-
-.no-images-text {
-  font-size: 18px;
-  color: #777;
-}
-
-.coordinates-text {
-  margin: 5px 0;
-  font-size: 18px;
+html, body, #root {
+  height: 100%;
+  margin: 0;
 }
