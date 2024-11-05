@@ -285,10 +285,10 @@ function App() {
               files={files}
             />
           </Box>
-          <Box flex={4} ml={2} display="flex" flexDirection="column" overflow="auto">
+          <Box flex={4} ml={2} display="flex" flexDirection="column" overflow="hidden">
             <Box display="flex" flexDirection="row" flexGrow={1} overflow="auto">
               <Box display="flex" flexDirection="column" flexGrow={1} overflow="auto">
-                <Box flexGrow={1} border={2} display="flex" overflow="auto">
+                <Box flexGrow={1} display="flex" overflow="hidden">
                   <ImageDisplay
                     imageSrc={images[currentIndex].url}
                     coordinates={coordinates}
@@ -296,13 +296,13 @@ function App() {
                     onCoordinatesChange={(newCoordinates) => setCoordinates(newCoordinates)}
                   />
                 </Box>
-                <Box border={2}>
+                <Box mr={1}>
                   <Typography variant="body1" color="textSecondary" fontWeight="bold">
                     {coordinates[files[currentIndex]?.name]
                       ? (
                         <>
-                          x: {coordinates[files[currentIndex].name].x.toFixed(0)} |
-                          y: {coordinates[files[currentIndex].name].y.toFixed(0)}
+                          x : {coordinates[files[currentIndex].name].x.toFixed(0)} |
+                          y : {coordinates[files[currentIndex].name].y.toFixed(0)} 
                         </>
                       )
                       : 'No coordinates available'}
@@ -312,7 +312,6 @@ function App() {
               </Box>
               <Box
                 width={60}
-                border={2}
                 display="flex"
                 flexDirection="column"
                 justifyContent="center"
@@ -335,7 +334,6 @@ function App() {
             </Box>
           </Box>
         </Box>
-
       ) : (
         <Typography variant="body1" color="textSecondary" align="center">
           No images loaded. Please select a folder.
