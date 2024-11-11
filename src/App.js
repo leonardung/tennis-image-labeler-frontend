@@ -1,9 +1,10 @@
 // App.js
 import React, { useState, useEffect } from "react";
 import axios from "axios";
-import { Button, Container, Typography, Box, CssBaseline } from "@mui/material";
+import { Button, Typography, Box, CssBaseline } from "@mui/material";
 
-import ImageDisplay from "./components/ImageDisplay";
+import ImageDisplayCoordinate from "./components/ImageDisplayCoordinate";
+import ImageDisplaySegmentation from "./components/ImageDisplaySegmentation";
 import NavigationButtons from "./components/NavigationButtons";
 import Controls from "./components/Controls";
 import ProgressBar from "./components/ProgressBar";
@@ -16,6 +17,7 @@ function App() {
   const [files, setFiles] = useState([]);
   const [folderPath, setFolderPath] = useState("");
   const [progress, setProgress] = useState(0);
+  const isSegmentationMode = true;
 
   // Handle keyboard navigation
   useEffect(() => {
@@ -283,12 +285,23 @@ function App() {
             <Box display="flex" flexDirection="row" flexGrow={1} overflow="auto">
               <Box display="flex" flexDirection="column" flexGrow={1} overflow="auto">
                 <Box flexGrow={1} display="flex" overflow="hidden">
-                  <ImageDisplay
-                    imageSrc={images[currentIndex].url}
-                    coordinates={coordinates}
-                    fileName={files[currentIndex]?.name}
-                    onCoordinatesChange={(newCoordinates) => setCoordinates(newCoordinates)}
-                  />
+                  {isSegmentationMode ? (
+                    <ImageDisplaySegmentation
+                      imageSrc={images[currentIndex].url}
+                      fileName={files[currentIndex]?.name}
+                      folderPath={folderPath}
+                      onMaskChange={(newMask) => {
+                        // Handle mask update if necessary
+                      }}
+                    />
+                  ) : (
+                    <ImageDisplayCoordinate
+                      imageSrc={images[currentIndex].url}
+                      coordinates={coordinates}
+                      fileName={files[currentIndex]?.name}
+                      onCoordinatesChange={(newCoordinates) => setCoordinates(newCoordinates)}
+                    />
+                  )}
                 </Box>
                 <Box mr={1}>
                   <Typography variant="body1" color="textSecondary" fontWeight="bold">
@@ -296,7 +309,7 @@ function App() {
                       ? (
                         <>
                           x : {coordinates[files[currentIndex].name].x.toFixed(0)} |
-                          y : {coordinates[files[currentIndex].name].y.toFixed(0)} 
+                          y : {coordinates[files[currentIndex].name].y.toFixed(0)}
                         </>
                       )
                       : 'No coordinates available'}
