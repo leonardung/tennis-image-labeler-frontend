@@ -5,9 +5,7 @@ import axios from "axios";
 import { Checkbox, FormControlLabel, Box, Typography } from "@mui/material";
 
 const ImageDisplaySegmentation = ({
-  imageSrc,
-  fileName,
-  folderPath,
+  image,
   onMaskChange,
 }) => {
   const {
@@ -25,7 +23,7 @@ const ImageDisplaySegmentation = ({
     handleMouseMove,
     handleMouseUp,
     calculateDisplayParams,
-  } = useImageDisplay(imageSrc);
+  } = useImageDisplay(image.url);
 
   // State to store the points and mask
   const [points, setPoints] = useState([]); // Array of { x, y, include }
@@ -85,14 +83,20 @@ const ImageDisplaySegmentation = ({
   const generateMask = async () => {
     try {
       const data = {
-        image_name: folderPath+"/"+fileName,
         coordinates: points,
         mask_input: null, // If you have previous masks, you can include them
       };
 
       // Make API call to backend
-      const response = await axios.post("http://localhost:8000/api/generate-mask/", data);
-
+      const response = await axios.post(
+        `http://localhost:8000/api/images/${image.id}/generate_mask/`,
+        data,
+        {
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
       // Assume the response contains 'mask' as a 2D array
       const maskData = response.data.mask;
       setMask(maskData);
@@ -267,7 +271,7 @@ const ImageDisplaySegmentation = ({
       >
         <img
           ref={imageRef}
-          src={imageSrc}
+          src={image.url}
           alt="Segmentation"
           onLoad={calculateDisplayParams}
           style={{

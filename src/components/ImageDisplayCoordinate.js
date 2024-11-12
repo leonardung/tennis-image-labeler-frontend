@@ -4,9 +4,9 @@ import useImageDisplay from "./useImageDisplay";
 import { Checkbox, FormControlLabel, Box, Typography } from "@mui/material";
 
 const ImageDisplayCoordinate = ({
-  imageSrc,
+  image,
+  fileId,
   coordinates,
-  fileName,
   onCoordinatesChange,
 }) => {
   const {
@@ -24,8 +24,7 @@ const ImageDisplayCoordinate = ({
     handleMouseMove,
     handleMouseUp,
     calculateDisplayParams,
-  } = useImageDisplay(imageSrc);
-
+  } = useImageDisplay(image.url);
   // Handle image click to record coordinates
   const handleImageClick = (event) => {
     // Prevent click handling when panning or Shift key is pressed
@@ -54,23 +53,18 @@ const ImageDisplayCoordinate = ({
     ) {
       return;
     }
-
-    // Update coordinates
-    const newCoordinates = {
-      ...coordinates,
-      [fileName]: { x: imgX, y: imgY },
-    };
-    onCoordinatesChange(newCoordinates);
+    onCoordinatesChange({ x: imgX, y: imgY })
   };
 
   // Calculate crosshair position based on coordinates
   const getCrosshairPosition = () => {
-    if (!coordinates[fileName]) {
+    if (!coordinates[image.id]) {
       return { top: 0, left: 0 };
     }
+    
+    const x = coordinates[image.id].x * zoomLevel + panOffset.x;
+    const y = coordinates[image.id].y * zoomLevel + panOffset.y;
 
-    const x = coordinates[fileName].x * zoomLevel + panOffset.x;
-    const y = coordinates[fileName].y * zoomLevel + panOffset.y;
 
     return {
       top: y,
@@ -133,7 +127,7 @@ const ImageDisplayCoordinate = ({
       >
         <img
           ref={imageRef}
-          src={imageSrc}
+          src={image.url}
           alt="Label"
           onLoad={calculateDisplayParams}
           style={{
@@ -150,7 +144,8 @@ const ImageDisplayCoordinate = ({
         />
 
         {/* Display crosshairs at the labeled coordinate if available */}
-        {coordinates[fileName] && (
+        {console.log(coordinates)}
+        {coordinates[image.id] && (
           <div
             style={{
               position: "absolute",

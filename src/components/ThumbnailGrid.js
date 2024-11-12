@@ -32,7 +32,7 @@ function ThumbnailGrid({ images, onThumbnailClick, currentIndex, coordinates, fi
     if (index >= images.length) return null;
 
     const image = images[index];
-    const hasCoordinates = coordinates[files[index].name];
+    const hasCoordinates = coordinates[images[index].id];
 
     return (
       <Box
