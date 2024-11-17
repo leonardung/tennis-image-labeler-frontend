@@ -27,6 +27,7 @@ function App() {
   const [progress, setProgress] = useState(0);
   const [isSegmentationMode, setIsSegmentationMode] = useState(true);
   const [masks, setMasks] = useState({});
+  const [polygons, setPolygons] = useState({});
   const [loading, setLoading] = useState(false);
   const [notification, setNotification] = useState({
     open: false,
@@ -392,15 +393,22 @@ function App() {
                 <Box flexGrow={1} display="flex" overflow="hidden">
                   {isSegmentationMode ? (
                     <ImageDisplaySegmentation
-                      image={images[currentIndex]}
-                      previousMask={masks[images[currentIndex].id]}
-                      onMaskChange={(newMask) => {
-                        setMasks((prevMasks) => ({
-                          ...prevMasks,
-                          [images[currentIndex].id]: newMask,
-                        }));
-                      }}
-                    />
+                    image={images[currentIndex]}
+                    previousMask={masks[images[currentIndex].id]}
+                    previousPolygons={polygons[images[currentIndex].id]}
+                    onMaskChange={(newMask) => {
+                      setMasks((prevMasks) => ({
+                        ...prevMasks,
+                        [images[currentIndex].id]: newMask,
+                      }));
+                    }}
+                    onPolygonsChange={(newPolygons) => {
+                      setPolygons((prevPolygons) => ({
+                        ...prevPolygons,
+                        [images[currentIndex].id]: newPolygons,
+                      }));
+                    }}
+                  />
                   ) : (
                     <ImageDisplayCoordinate
                       image={images[currentIndex]}

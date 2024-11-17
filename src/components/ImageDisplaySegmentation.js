@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useRef } from "react";
 import useImageDisplay from "./useImageDisplay";
 import axios from "axios";
-import { Checkbox, FormControlLabel, Box, Typography, Button } from "@mui/material";
+import { Checkbox, FormControlLabel, Box, Typography, Button, Slider } from "@mui/material";
 
-const ImageDisplaySegmentation = ({ image, previousMask, onMaskChange }) => {
+const ImageDisplaySegmentation = ({ image, previousMask, previousPolygons, onMaskChange, onPolygonsChange }) => {
   const {
     imageRef,
     containerRef,
@@ -23,17 +23,24 @@ const ImageDisplaySegmentation = ({ image, previousMask, onMaskChange }) => {
 
   const [points, setPoints] = useState([]);
   const [mask, setMask] = useState(previousMask || null);
+  const [polygons, setPolygons] = useState(previousPolygons || []);
+  const [complexity, setComplexity] = useState(50);
 
   const canvasRef = useRef(null);
 
   useEffect(() => {
     setPoints([]);
     setMask(previousMask || null);
+    setPolygons(previousPolygons || []);
   }, [image]);
 
   useEffect(() => {
     setMask(previousMask || null);
   }, [previousMask]);
+
+  useEffect(() => {
+    setPolygons(previousPolygons || []);
+  }, [previousPolygons]);
 
   const handleImageClick = (event) => {
     event.preventDefault();
@@ -83,7 +90,7 @@ const ImageDisplaySegmentation = ({ image, previousMask, onMaskChange }) => {
       };
 
       const response = await axios.post(
-        `http://localhost:8000/api/images/${image.id}/generate_mask/`,
+        `http://localhost:8000/api/images/${image.id}/generate_mask/?complexity=${complexity}`,
         data,
         {
           headers: {
@@ -91,13 +98,19 @@ const ImageDisplaySegmentation = ({ image, previousMask, onMaskChange }) => {
           },
         }
       );
-      // Assume the response contains 'mask' as a 2D array
+      // Assume the response contains 'mask' and 'polygons'
       const maskData = response.data.mask;
+      const polygonsData = response.data.polygons;
       setMask(maskData);
+      setPolygons(polygonsData);
 
       // Call onMaskChange if provided
       if (onMaskChange) {
         onMaskChange(maskData);
+      }
+      // Call onPolygonsChange if provided
+      if (onPolygonsChange) {
+        onPolygonsChange(polygonsData);
       }
     } catch (error) {
       console.error("Error generating mask:", error);
@@ -113,7 +126,15 @@ const ImageDisplaySegmentation = ({ image, previousMask, onMaskChange }) => {
 
   // Draw the mask onto the canvas whenever it changes
   useEffect(() => {
-    if (!mask || !canvasRef.current) return;
+    if (
+      !mask ||
+      !canvasRef.current ||
+      mask.length === 0 ||
+      !Array.isArray(mask[0]) ||
+      mask[0].length === 0
+    ) {
+      return;
+    }
 
     const canvas = canvasRef.current;
     const ctx = canvas.getContext("2d");
@@ -169,8 +190,8 @@ const ImageDisplaySegmentation = ({ image, previousMask, onMaskChange }) => {
           {/* Circle to represent the point */}
           <div
             style={{
-              width: "10px",
-              height: "10px",
+              width: "15px",
+              height: "15px",
               borderRadius: "50%",
               backgroundColor: point.include ? "green" : "red",
               border: "2px solid white",
@@ -184,7 +205,8 @@ const ImageDisplaySegmentation = ({ image, previousMask, onMaskChange }) => {
   // Function to clear points
   const clearPoints = () => {
     setPoints([]);
-    setMask(null)
+    setMask(null);
+    setPolygons([]);
   };
 
   return (
@@ -232,6 +254,34 @@ const ImageDisplaySegmentation = ({ image, previousMask, onMaskChange }) => {
         <Button variant="contained" color="secondary" onClick={clearPoints}>
           Clear Points
         </Button>
+      </Box>
+
+      {/* Slider for complexity */}
+      <Box
+        sx={{
+          position: "absolute",
+          top: 110,
+          left: 10,
+          zIndex: 1,
+          backgroundColor: "rgba(250,250,250, 0.4)",
+          padding: 1,
+          borderRadius: 1,
+          color: "black",
+          width: 200,
+        }}
+      >
+        <Typography id="complexity-slider" gutterBottom>
+          Complexity: {complexity}
+        </Typography>
+        <Slider
+          value={complexity}
+          min={0}
+          max={100}
+          onChange={(e, newValue) => {
+            setComplexity(newValue);
+          }}
+          aria-labelledby="complexity-slider"
+        />
       </Box>
 
       <div
@@ -295,6 +345,35 @@ const ImageDisplaySegmentation = ({ image, previousMask, onMaskChange }) => {
             }}
           />
         )}
+
+        {/* Render the polygons with glowing effect */}
+        {Array.isArray(polygons) && polygons.length > 0 && (
+        <svg
+          style={{
+            position: "absolute",
+            top: 0,
+            left: 0,
+            width: `${imgDimensions.width}px`,
+            height: `${imgDimensions.height}px`,
+            transform: `translate(${panOffset.x}px, ${panOffset.y}px) scale(${zoomLevel})`,
+            transformOrigin: "0 0",
+            pointerEvents: "none",
+          }}
+        >
+          {polygons.map((polygon, index) => (
+            <polygon
+              key={index}
+              points={polygon.map((point) => `${point[0]},${point[1]}`).join(" ")}
+              style={{
+                fill: "none",
+                stroke: "cyan",
+                strokeWidth: 2,
+                filter: "drop-shadow(0 0 5px cyan)",
+              }}
+            />
+          ))}
+        </svg>
+      )}
 
         {/* Render the points */}
         {renderPoints()}
