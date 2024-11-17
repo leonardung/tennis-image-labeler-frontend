@@ -16,7 +16,7 @@ const useImageDisplay = (imageSrc) => {
   const [ShiftKeyPress, setShiftKeyPress] = useState(false);
 
   // State for the toggle to keep or reset zoom and pan
-  const [keepZoomPan, setKeepZoomPan] = useState(true);
+  const [keepZoomPan, setKeepZoomPan] = useState(false);
 
   const calculateDisplayParams = () => {
     if (!imageRef.current || !containerRef.current) {
@@ -74,8 +74,6 @@ const useImageDisplay = (imageSrc) => {
     // Recalculate image dimensions when the image source changes
     calculateDisplayParams();
 
-    window.addEventListener("resize", calculateDisplayParams);
-
     // Event listeners to track Shift key state
     const handleKeyDown = (event) => {
       if (event.key === "Shift") {
@@ -92,12 +90,48 @@ const useImageDisplay = (imageSrc) => {
     window.addEventListener("keydown", handleKeyDown);
     window.addEventListener("keyup", handleKeyUp);
 
+    // Use ResizeObserver to detect changes in the container's size
+    let resizeObserver;
+    if (containerRef.current) {
+      resizeObserver = new ResizeObserver(() => {
+        calculateDisplayParams();
+        if (!keepZoomPan) {
+          initializeZoomPan();
+        }
+      });
+      resizeObserver.observe(containerRef.current);
+    }
+
     return () => {
-      window.removeEventListener("resize", calculateDisplayParams);
+      if (resizeObserver && containerRef.current) {
+        resizeObserver.unobserve(containerRef.current);
+      }
       window.removeEventListener("keydown", handleKeyDown);
       window.removeEventListener("keyup", handleKeyUp);
     };
-  }, [imageSrc]);
+  }, [imageSrc, keepZoomPan]);
+
+  // Add an event listener for when the image loads
+  useEffect(() => {
+    const img = imageRef.current;
+
+    const handleImageLoad = () => {
+      calculateDisplayParams();
+      if (!keepZoomPan) {
+        initializeZoomPan();
+      }
+    };
+
+    if (img) {
+      img.addEventListener("load", handleImageLoad);
+    }
+
+    return () => {
+      if (img) {
+        img.removeEventListener("load", handleImageLoad);
+      }
+    };
+  }, [imageSrc, keepZoomPan]);
 
   const handleWheel = (event) => {
     event.preventDefault(); // Prevent default browser zoom behavior

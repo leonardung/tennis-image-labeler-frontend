@@ -1,13 +1,9 @@
-// ImageDisplaySegmentation.js
 import React, { useState, useEffect, useRef } from "react";
 import useImageDisplay from "./useImageDisplay";
 import axios from "axios";
-import { Checkbox, FormControlLabel, Box, Typography } from "@mui/material";
+import { Checkbox, FormControlLabel, Box, Typography, Button } from "@mui/material";
 
-const ImageDisplaySegmentation = ({
-  image,
-  onMaskChange,
-}) => {
+const ImageDisplaySegmentation = ({ image, previousMask, onMaskChange }) => {
   const {
     imageRef,
     containerRef,
@@ -25,24 +21,24 @@ const ImageDisplaySegmentation = ({
     calculateDisplayParams,
   } = useImageDisplay(image.url);
 
-  // State to store the points and mask
-  const [points, setPoints] = useState([]); // Array of { x, y, include }
-  const [mask, setMask] = useState(null); // 2D array representing the mask
+  const [points, setPoints] = useState([]);
+  const [mask, setMask] = useState(previousMask || null);
 
-  // Ref for the canvas to draw the mask
   const canvasRef = useRef(null);
 
-  // Handle image click to add points
+  useEffect(() => {
+    setPoints([]);
+    setMask(previousMask || null);
+  }, [image]);
+
+  useEffect(() => {
+    setMask(previousMask || null);
+  }, [previousMask]);
+
   const handleImageClick = (event) => {
-    // Prevent default behavior
     event.preventDefault();
-
-    // Prevent click handling when panning
     if (isPanning) return;
-
-    if (!containerRef.current || !imageRef.current) {
-      return;
-    }
+    if (!containerRef.current || !imageRef.current) return;
 
     const container = containerRef.current;
     const containerRect = container.getBoundingClientRect();
@@ -79,15 +75,13 @@ const ImageDisplaySegmentation = ({
     event.preventDefault();
   };
 
-  // Function to request mask generation from backend
   const generateMask = async () => {
     try {
       const data = {
         coordinates: points,
-        mask_input: null, // If you have previous masks, you can include them
+        mask_input: mask || null,
       };
 
-      // Make API call to backend
       const response = await axios.post(
         `http://localhost:8000/api/images/${image.id}/generate_mask/`,
         data,
@@ -114,8 +108,6 @@ const ImageDisplaySegmentation = ({
   useEffect(() => {
     if (points.length > 0) {
       generateMask();
-    } else {
-      setMask(null); // Clear mask if no points
     }
   }, [points]);
 
@@ -129,7 +121,6 @@ const ImageDisplaySegmentation = ({
     const maskWidth = mask[0].length;
     const maskHeight = mask.length;
 
-    // Set canvas size
     canvas.width = maskWidth;
     canvas.height = maskHeight;
 
@@ -159,7 +150,6 @@ const ImageDisplaySegmentation = ({
     ctx.putImageData(imageData, 0, 0);
   }, [mask, imgDimensions]);
 
-  // Function to render the points
   const renderPoints = () => {
     return points.map((point, index) => {
       const x = point.x * zoomLevel + panOffset.x;
@@ -194,6 +184,7 @@ const ImageDisplaySegmentation = ({
   // Function to clear points
   const clearPoints = () => {
     setPoints([]);
+    setMask(null)
   };
 
   return (
@@ -231,16 +222,16 @@ const ImageDisplaySegmentation = ({
       <Box
         sx={{
           position: "absolute",
-          top: 50,
+          top: 60,
           left: 10,
           zIndex: 1,
-          backgroundColor: "rgba(250,250,250, 0.4)",
-          paddingLeft: 1,
           borderRadius: 1,
           color: "black",
         }}
       >
-        <button onClick={clearPoints}>Clear Points</button>
+        <Button variant="contained" color="secondary" onClick={clearPoints}>
+          Clear Points
+        </Button>
       </Box>
 
       <div

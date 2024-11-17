@@ -25,9 +25,9 @@ function App() {
   const [files, setFiles] = useState([]);
   const [folderPath, setFolderPath] = useState("");
   const [progress, setProgress] = useState(0);
-  const [isSegmentationMode, setIsSegmentationMode] = useState(false);
+  const [isSegmentationMode, setIsSegmentationMode] = useState(true);
+  const [masks, setMasks] = useState({});
   const [loading, setLoading] = useState(false);
-  const [modelLoaded, setModelLoaded] = useState(false);
   const [notification, setNotification] = useState({
     open: false,
     message: "",
@@ -163,7 +163,7 @@ function App() {
       }
       return acc;
     }, []);
-  
+
     if (allCoords.length === 0) {
       setNotification({
         open: true,
@@ -172,7 +172,7 @@ function App() {
       });
       return;
     }
-  
+
     try {
       await axios.post(
         `http://localhost:8000/api/images/save_all_coordinates/`,
@@ -197,7 +197,7 @@ function App() {
       });
     }
   };
-  
+
 
   // Function to download labels as CSV
   const handleSaveLabels = () => {
@@ -225,11 +225,11 @@ function App() {
       });
       return;
     }
-  
+
     setProgress(0);
-  
+
     const socket = new WebSocket("ws://localhost:8000/ws/process-images/"); // Update the URL if necessary
-  
+
     socket.onopen = () => {
       console.log("WebSocket connection established.");
       socket.send(
@@ -238,14 +238,14 @@ function App() {
         })
       );
     };
-  
+
     socket.onmessage = (event) => {
       const data = JSON.parse(event.data);
       if (data.status === "success") {
         const { image_id, x, y } = data.coordinates || {};
         const progress = data.progress || 0;
         setProgress(progress);
-  
+
         if (image_id && x != null && y != null) {
           setCoordinates((prevCoordinates) => ({
             ...prevCoordinates,
@@ -268,7 +268,7 @@ function App() {
         });
       }
     };
-  
+
     socket.onerror = (error) => {
       console.error("WebSocket error:", error);
       setNotification({
@@ -278,15 +278,15 @@ function App() {
       });
       socket.close();
     };
-  
+
     socket.onclose = () => {
       console.log("WebSocket connection closed.");
       setTimeout(() => {
         setProgress(0);
-    }, 3000); 
+      }, 3000);
     };
   };
-  
+
 
   // Function to clear labels
   const handleClearLabels = () => {
@@ -301,7 +301,7 @@ function App() {
   // Function to reload labels from the database
   const handleReloadFromDatabase = async () => {
     if (!folderPath) return;
-  
+
     try {
       const response = await axios.get(
         `http://localhost:8000/api/images/folder_coordinates/`,
@@ -328,7 +328,7 @@ function App() {
       });
     }
   };
-  
+
 
   // Handle notification close
   const handleNotificationClose = () => {
@@ -393,8 +393,12 @@ function App() {
                   {isSegmentationMode ? (
                     <ImageDisplaySegmentation
                       image={images[currentIndex]}
+                      previousMask={masks[images[currentIndex].id]}
                       onMaskChange={(newMask) => {
-                        // Handle mask update if necessary
+                        setMasks((prevMasks) => ({
+                          ...prevMasks,
+                          [images[currentIndex].id]: newMask,
+                        }));
                       }}
                     />
                   ) : (
@@ -418,7 +422,7 @@ function App() {
                   >
                     {coordinates[images[currentIndex].id] ? (
                       <>
-                        x : {coordinates[images[currentIndex].id].x.toFixed(0)} | 
+                        x : {coordinates[images[currentIndex].id].x.toFixed(0)} |
                         y : {coordinates[images[currentIndex].id].y.toFixed(0)}
                       </>
                     ) : (
