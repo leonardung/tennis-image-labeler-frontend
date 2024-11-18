@@ -3,7 +3,13 @@ import useImageDisplay from "./useImageDisplay";
 import axios from "axios";
 import { Checkbox, FormControlLabel, Box, Typography, Button, Slider } from "@mui/material";
 
-const ImageDisplaySegmentation = ({ image, previousMask, previousPolygons, onMaskChange, onPolygonsChange }) => {
+const ImageDisplaySegmentation = ({
+  image,
+  previousMask,
+  previousPolygons,
+  onMaskChange,
+  onPolygonsChange,
+}) => {
   const {
     imageRef,
     containerRef,
@@ -124,6 +130,37 @@ const ImageDisplaySegmentation = ({ image, previousMask, previousPolygons, onMas
     }
   }, [points]);
 
+  // NEW: Generate polygons whenever complexity changes and a mask exists
+  useEffect(() => {
+    if (mask) {
+      generatePolygons();
+    }
+  }, [complexity]);
+
+  // NEW: Function to generate polygons based on current mask and complexity
+  const generatePolygons = async () => {
+    try {
+      const response = await axios.post(
+        `http://localhost:8000/api/images/generate_polygon/?complexity=${complexity}`,
+        { mask },
+        {
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
+      const polygonsData = response.data.polygons;
+      setPolygons(polygonsData);
+
+      // Call onPolygonsChange if provided
+      if (onPolygonsChange) {
+        onPolygonsChange(polygonsData);
+      }
+    } catch (error) {
+      console.error("Error generating polygons:", error);
+    }
+  };
+
   // Draw the mask onto the canvas whenever it changes
   useEffect(() => {
     if (
@@ -195,6 +232,42 @@ const ImageDisplaySegmentation = ({ image, previousMask, previousPolygons, onMas
               borderRadius: "50%",
               backgroundColor: point.include ? "green" : "red",
               border: "2px solid white",
+            }}
+          ></div>
+        </div>
+      );
+    });
+  };
+
+  // Render the points of the polygons
+  const renderPolygonPoints = () => {
+    if (!Array.isArray(polygons) || polygons.length === 0) return null;
+
+    const allPoints = polygons.flat();
+
+    return allPoints.map((point, index) => {
+      const x = point[0] * zoomLevel + panOffset.x;
+      const y = point[1] * zoomLevel + panOffset.y;
+
+      return (
+        <div
+          key={`polygon-point-${index}`}
+          style={{
+            position: "absolute",
+            pointerEvents: "none",
+            top: `${y}px`,
+            left: `${x}px`,
+            transform: "translate(-50%, -50%)",
+          }}
+        >
+          {/* Circle to represent the polygon point */}
+          <div
+            style={{
+              width: "10px",
+              height: "10px",
+              borderRadius: "50%",
+              backgroundColor: "yellow",
+              border: "1px solid black",
             }}
           ></div>
         </div>
@@ -348,32 +421,35 @@ const ImageDisplaySegmentation = ({ image, previousMask, previousPolygons, onMas
 
         {/* Render the polygons with glowing effect */}
         {Array.isArray(polygons) && polygons.length > 0 && (
-        <svg
-          style={{
-            position: "absolute",
-            top: 0,
-            left: 0,
-            width: `${imgDimensions.width}px`,
-            height: `${imgDimensions.height}px`,
-            transform: `translate(${panOffset.x}px, ${panOffset.y}px) scale(${zoomLevel})`,
-            transformOrigin: "0 0",
-            pointerEvents: "none",
-          }}
-        >
-          {polygons.map((polygon, index) => (
-            <polygon
-              key={index}
-              points={polygon.map((point) => `${point[0]},${point[1]}`).join(" ")}
-              style={{
-                fill: "none",
-                stroke: "cyan",
-                strokeWidth: 2,
-                filter: "drop-shadow(0 0 5px cyan)",
-              }}
-            />
-          ))}
-        </svg>
-      )}
+          <svg
+            style={{
+              position: "absolute",
+              top: 0,
+              left: 0,
+              width: `${imgDimensions.width}px`,
+              height: `${imgDimensions.height}px`,
+              transform: `translate(${panOffset.x}px, ${panOffset.y}px) scale(${zoomLevel})`,
+              transformOrigin: "0 0",
+              pointerEvents: "none",
+            }}
+          >
+            {polygons.map((polygon, index) => (
+              <polygon
+                key={index}
+                points={polygon.map((point) => `${point[0]},${point[1]}`).join(" ")}
+                style={{
+                  fill: "none",
+                  stroke: "cyan",
+                  strokeWidth: 2,
+                  filter: "drop-shadow(0 0 5px cyan)",
+                }}
+              />
+            ))}
+          </svg>
+        )}
+
+        {/* Render the polygon points */}
+        {renderPolygonPoints()}
 
         {/* Render the points */}
         {renderPoints()}
