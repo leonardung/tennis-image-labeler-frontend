@@ -6,9 +6,7 @@ import { Checkbox, FormControlLabel, Box, Typography, Button, Slider } from "@mu
 const ImageDisplaySegmentation = ({
   image,
   previousMask,
-  previousPolygons,
   onMaskChange,
-  onPolygonsChange,
 }) => {
   const {
     imageRef,
@@ -29,24 +27,18 @@ const ImageDisplaySegmentation = ({
 
   const [points, setPoints] = useState([]);
   const [mask, setMask] = useState(previousMask || null);
-  const [polygons, setPolygons] = useState(previousPolygons || []);
-  const [complexity, setComplexity] = useState(50);
 
   const canvasRef = useRef(null);
 
   useEffect(() => {
     setPoints([]);
     setMask(previousMask || null);
-    setPolygons(previousPolygons || []);
   }, [image]);
 
   useEffect(() => {
     setMask(previousMask || null);
   }, [previousMask]);
 
-  useEffect(() => {
-    setPolygons(previousPolygons || []);
-  }, [previousPolygons]);
 
   const handleImageClick = (event) => {
     event.preventDefault();
@@ -96,7 +88,7 @@ const ImageDisplaySegmentation = ({
       };
 
       const response = await axios.post(
-        `http://localhost:8000/api/images/${image.id}/generate_mask/?complexity=${complexity}`,
+        `http://localhost:8000/api/images/${image.id}/generate_mask/`,
         data,
         {
           headers: {
@@ -104,19 +96,13 @@ const ImageDisplaySegmentation = ({
           },
         }
       );
-      // Assume the response contains 'mask' and 'polygons'
+      // Assume the response contains 'mask'
       const maskData = response.data.mask;
-      const polygonsData = response.data.polygons;
       setMask(maskData);
-      setPolygons(polygonsData);
 
       // Call onMaskChange if provided
       if (onMaskChange) {
         onMaskChange(maskData);
-      }
-      // Call onPolygonsChange if provided
-      if (onPolygonsChange) {
-        onPolygonsChange(polygonsData);
       }
     } catch (error) {
       console.error("Error generating mask:", error);
@@ -130,36 +116,6 @@ const ImageDisplaySegmentation = ({
     }
   }, [points]);
 
-  // NEW: Generate polygons whenever complexity changes and a mask exists
-  useEffect(() => {
-    if (mask) {
-      generatePolygons();
-    }
-  }, [complexity]);
-
-  // NEW: Function to generate polygons based on current mask and complexity
-  const generatePolygons = async () => {
-    try {
-      const response = await axios.post(
-        `http://localhost:8000/api/images/generate_polygon/?complexity=${complexity}`,
-        { mask },
-        {
-          headers: {
-            "Content-Type": "application/json",
-          },
-        }
-      );
-      const polygonsData = response.data.polygons;
-      setPolygons(polygonsData);
-
-      // Call onPolygonsChange if provided
-      if (onPolygonsChange) {
-        onPolygonsChange(polygonsData);
-      }
-    } catch (error) {
-      console.error("Error generating polygons:", error);
-    }
-  };
 
   // Draw the mask onto the canvas whenever it changes
   useEffect(() => {
@@ -239,47 +195,12 @@ const ImageDisplaySegmentation = ({
     });
   };
 
-  // Render the points of the polygons
-  const renderPolygonPoints = () => {
-    if (!Array.isArray(polygons) || polygons.length === 0) return null;
-
-    const allPoints = polygons.flat();
-
-    return allPoints.map((point, index) => {
-      const x = point[0] * zoomLevel + panOffset.x;
-      const y = point[1] * zoomLevel + panOffset.y;
-
-      return (
-        <div
-          key={`polygon-point-${index}`}
-          style={{
-            position: "absolute",
-            pointerEvents: "none",
-            top: `${y}px`,
-            left: `${x}px`,
-            transform: "translate(-50%, -50%)",
-          }}
-        >
-          {/* Circle to represent the polygon point */}
-          <div
-            style={{
-              width: "10px",
-              height: "10px",
-              borderRadius: "50%",
-              backgroundColor: "yellow",
-              border: "1px solid black",
-            }}
-          ></div>
-        </div>
-      );
-    });
-  };
+  
 
   // Function to clear points
   const clearPoints = () => {
     setPoints([]);
     setMask(null);
-    setPolygons([]);
   };
 
   return (
@@ -329,33 +250,6 @@ const ImageDisplaySegmentation = ({
         </Button>
       </Box>
 
-      {/* Slider for complexity */}
-      <Box
-        sx={{
-          position: "absolute",
-          top: 110,
-          left: 10,
-          zIndex: 1,
-          backgroundColor: "rgba(250,250,250, 0.4)",
-          padding: 1,
-          borderRadius: 1,
-          color: "black",
-          width: 200,
-        }}
-      >
-        <Typography id="complexity-slider" gutterBottom>
-          Complexity: {complexity}
-        </Typography>
-        <Slider
-          value={complexity}
-          min={0}
-          max={100}
-          onChange={(e, newValue) => {
-            setComplexity(newValue);
-          }}
-          aria-labelledby="complexity-slider"
-        />
-      </Box>
 
       <div
         ref={containerRef}
@@ -418,38 +312,6 @@ const ImageDisplaySegmentation = ({
             }}
           />
         )}
-
-        {/* Render the polygons with glowing effect */}
-        {Array.isArray(polygons) && polygons.length > 0 && (
-          <svg
-            style={{
-              position: "absolute",
-              top: 0,
-              left: 0,
-              width: `${imgDimensions.width}px`,
-              height: `${imgDimensions.height}px`,
-              transform: `translate(${panOffset.x}px, ${panOffset.y}px) scale(${zoomLevel})`,
-              transformOrigin: "0 0",
-              pointerEvents: "none",
-            }}
-          >
-            {polygons.map((polygon, index) => (
-              <polygon
-                key={index}
-                points={polygon.map((point) => `${point[0]},${point[1]}`).join(" ")}
-                style={{
-                  fill: "none",
-                  stroke: "cyan",
-                  strokeWidth: 2,
-                  filter: "drop-shadow(0 0 5px cyan)",
-                }}
-              />
-            ))}
-          </svg>
-        )}
-
-        {/* Render the polygon points */}
-        {renderPolygonPoints()}
 
         {/* Render the points */}
         {renderPoints()}
